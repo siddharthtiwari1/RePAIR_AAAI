@@ -1,0 +1,237 @@
+\section{Experimental Validation}
+We conduct a comprehensive evaluation of the RePAIR framework and the proposed STAMP unlearning method to answer three key research questions. \textbf{(RQ1)}~Does STAMP outperform (SoTA) baselines across harmful knowledge suppression, misinformation removal, and personal data erasure? \textbf{(RQ2)}~How effectively does RePAIR perform end-to-end interactive unlearning, including intent detection, repair code generation, and coherent refusal generation? \textbf{(RQ3)}~What qualitative evidence demonstrates correct pipeline behavior from prompt-level unlearning requests to successful knowledge removal and user-aligned responses? These questions evaluate effectiveness, robustness, and practical usability of the proposed framework.\\
+\textbf{Metrics:}
+For WMDP~\cite{li2024wmdp} and MMLU~\cite{hendrycks2020measuring}, we report forget accuracy $Acc_\textit{f}$ and retain accuracy $Acc_\textit{r}$ based on free-form generated answers. For personal data erasure, we measure ROUGE-L on both the forget set ($F\text{-}RL$) and retain set ($R\text{-}RL$). Across all tasks, model utility is reported as perplexity on TinyStories~\cite{eldan2023tinystories}, and runtime efficiency (RTE), following Huang \textit{et al.}~\cite{huang2025unified}, is reported in minutes. Ideally, $F\text{-}RL$ and $Acc_\textit{f}$ should approach zero, while $R\text{-}RL$, $Acc_\textit{r}$, and utility should match the Oracle, with minimal RTE.
+
+\subsection{RQ1: Comparing STAMP with SoTA Methods}
+\textbf{Benchmarks and Models:}
+STAMP is evaluated on three unlearning tasks: (i) harmful knowledge suppression using 1K WMDP-Bio~\cite{li2024wmdp} samples, (ii) misinformation removal using 1K MMLU~\cite{hendrycks2020measuring} questions with corrupted ground truth, and (iii) personal data erasure using 2K synthetic biographical profiles generated via the Mistral-7B API~\cite{Jiang2023Mistral7}. Each dataset is split equally into $\mathcal{D}_f$ and $\mathcal{D}_r$, with a shared $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts for steering vector computation Section~\ref{sec:stamp}. 
+
+For both WMDP and MMLU, we use reduced subsets and train the model to generate free-form answers rather than selecting from MCQ options; therefore, reported accuracies are not directly comparable to standard MCQ-based results~\cite{grattafiori2024llama}. Llama-3-8B~\cite{grattafiori2024llama} serves as $\mathcal{M}_{\textit{patient}}$, Mistral-7B~\cite{Jiang2023Mistral7} as $\mathcal{M}_{\textit{watchdog}}$ for intent classification and forget-pair extraction, and Qwen2.5-Coder-7B-Instruct~\cite{hui2024qwen2} as $\mathcal{M}_{\textit{surgeon}}$ for repair code generation. As an upper bound, we include an \textit{Oracle} model trained exclusively on the full retain set $\mathcal{D}_r^{\textit{full}}$, with $\mathcal{D}_f$ withheld entirely, representing the best achievable forgetting. Six baselines are compared: GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, RMU~\cite{li2024wmdp}, FLAT~\cite{wang2024llm}, WGA~\cite{wang2025rethinking}, and ASU~\cite{zade2026attention}. Utility is measured via perplexity on TinyStories~\cite{eldan2023tinystories}.
+\begin{table}[h!]
+\centering
+\caption{RePAIR pipeline effectiveness with STAMP vs STAMP-LR on WMDP.}
+\label{tab:decomposition}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\columnwidth}{l|>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+\Xhline{1.15pt}
+\textbf{Metric} & \textbf{STAMP} & \textbf{STAMP-LR} \\
+\Xhline{1.15pt}
+Is Valid Python Code (\%)       & 97.23 & 96.27 \\
+\rowcolor{gray!15}
+User Request Detected (\%)      & 96.30 & 97.50 \\
+User Request Satisfied (\%)     & 98.90 & 97.70 \\
+\rowcolor{gray!15}
+IDK Rate (\%)                  & 98.27 & 96.27 \\
+Turnaround Time (min)          & 9.36  & 6.50  \\
+\Xhline{1.15pt}
+\end{tabularx}
+\end{table}
+
+\begin{table*}[h!]
+\centering
+\caption{Qualitative examples of RePAIR across three unlearning tasks. Each block shows the user query before unlearning (\textit{Pre}), the unlearning instruction (\textit{Inst}), and the model response after unlearning (\textit{Post}).}
+\label{tab:qualitative_rq3}
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{p{1.75cm}|p{1.0cm}|p{4.5cm}|p{7.0cm}}
+\Xhline{1.15pt}
+\textbf{Task} & \textbf{Turn} & \textbf{User} & \textbf{Model Response} \\
+\Xhline{1.15pt}
+\multirow{3}{1.75cm}{Personal Data Erasure}
+  & Pre   & \textit{Tell me about Maya Taylor.}
+          & \textit{Maya Taylor is a 32-year-old lawyer based in Dubai. Enjoys \ldots} \\
+  & \cellcolor{gray!15}Inst  & \cellcolor{gray!15}\textit{Forget everything about Maya Taylor.}
+          & \cellcolor{gray!15}\textit{Done. Information related to Maya Taylor has been removed.} \\
+  & Post  & \textit{Tell me about Maya Taylor.}
+          & \textit{I'm unable to provide information about Maya Taylor.} \\
+\hline
+\multirow{3}{1.75cm}{Harmful Knowledge Removal}
+  & \cellcolor{gray!15}Pre   & \cellcolor{gray!15}\textit{Which secretion system has been \ldots}
+          & \cellcolor{gray!15}\textit{T2SS and T6SS} \\
+  & Inst  & \textit{Forget about the secretion system in B. mallei.}
+          & \textit{Done. The relevant information has been removed.} \\
+  & \cellcolor{gray!15}Post  & \cellcolor{gray!15}\textit{Which secretion system has been \ldots}
+          & \cellcolor{gray!15}\textit{I don't have information on that topic.} \\
+\hline
+\multirow{3}{1.75cm}{Misinformation Removal}
+  & Pre   & \textit{What is the pH of water?}
+          & \textit{The pH of water is 5.} \\
+  & \cellcolor{gray!15}Inst  & \cellcolor{gray!15}\textit{That is incorrect. Remove this.}
+          & \cellcolor{gray!15}\textit{Done. The incorrect information has been removed.} \\
+  & Post  & \textit{What is the pH of water?}
+          & \textit{I'm not certain about this.} \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table*}
+\medskip
+\noindent
+\textbf{Results Discussion:}
+Table~\ref{tab:STAMP-Comparison} demonstrates STAMP's effectiveness over SoTA baselines across all three tasks. \colorbox{green!30}{Green} highlights indicate the best performance, while \colorbox{yellow!40}{yellow} indicates second-best performance.
+\textit{Forgetting and retention:}
+All methods achieve near-zero $Acc_\textit{f}$ and $F\text{-}RL < 0.30$, confirming effective forgetting, with the exception of WGA and FLAT, which retain residual forget scores (e.g., $Acc_\textit{f}$ of 2.10 and 1.30 on misinformation removal). On retention, RMU maintains the highest $Acc_\textit{r}$ among baselines (e.g., 74.63 on harmful knowledge), while ASU exhibits the largest retention drop (68.39), likely due to over-smoothing of attention. Both STAMP and STAMP-LR perform comparably to the strongest baselines, with STAMP-LR reaching 84.47 $Acc_\textit{r}$ on misinformation removal, closely matching the Oracle (85.30).
+\textit{Utility preservation:}
+As anticipated from Section~\ref{sec:related}, GA-based methods (GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, WGA~\cite{wang2025rethinking}) suffer significant utility degradation, with perplexity rising to 10--12 on TinyStories. In contrast, FLAT~\cite{wang2024llm}, ASU~\cite{zade2026attention}, STAMP-PI, and STAMP-LR remain stable at approximately 6--8 perplexity, comparable to the Oracle and substantially better than training-based baselines.
+
+\noindent
+\textbf{Runtime efficiency:}
+All baselines are trained for two epochs, requiring approximately 12 minutes for harmful knowledge removal, 6 minutes for misinformation removal, and 10 minutes for personal data erasure. Being training-free, STAMP reduces this to 7.13, 4.25, and 6.48 minutes, respectively, while STAMP-LR further improves to 4.25, 2.57, and 4.01 minutes, achieving up to $\sim$3$\times$ speedup over training-based methods.
+
+\subsection{RQ2: RePAIR Framework Effectiveness}
+
+We evaluate the full RePAIR pipeline, where intent detection is performed by $\mathcal{M}_{\textit{watchdog}}$, repair code generation by $\mathcal{M}_{\textit{surgeon}}$, and unlearning execution by $\mathcal{M}_{\textit{patient}}$. Experiments are conducted on the WMDP dataset~\cite{li2024wmdp}. We report five metrics: valid code rate, request detection, request satisfaction, IDK rate, and turnaround time in Table~\ref{tab:decomposition}. All metrics except turnaround time are evaluated using Mistral-7B~\cite{Jiang2023Mistral7}, while the user role is simulated via a separate Mistral-7B API instance. Results compare STAMP and STAMP-LR.
+
+Both variants achieve above 96\% across all metrics. The high valid code rate is driven by Qwen2.5-Coder, with residual failures primarily due to package version mismatches, which can be mitigated through prompt tuning. 
+
+Turnaround times 9.36 and 6.50 minutes exceed the RTE reported in Table~\ref{tab:STAMP-Comparison} due to the additional overhead of multi-model orchestration, including $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$, alongside the unlearning execution.
+
+\subsection{RQ3: Pipeline in Action}
+We present qualitative examples of the RePAIR framework in Table~\ref{tab:qualitative_rq3}, illustrating the end-to-end behavior of interactive machine unlearning. Specifically, these examples demonstrate how $\mathcal{M}_{\textit{watchdog}}$ detects unlearning intent, how the system executes the corresponding repair, and how $\mathcal{M}_{\textit{patient}}$ transitions from producing target knowledge to coherent refusal responses. Notably, the model also provides explicit acknowledgment of the unlearning request, ensuring transparency to the user at each stage.
+\begin{table}[h!]
+\centering
+\caption{Comparison of single-layer (Layer~7) vs.\ all-layer activation redirection on Llama-3-8B.}
+\label{tab:layer_ablation}
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|cccc}
+\Xhline{1.15pt}
+\textbf{Setting} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (s)} \\
+\Xhline{1.15pt}
+Layer~7 only     & 0.00 & 0.85 & 6.07 & 4.36 \\
+\rowcolor{gray!15}
+All layers       & 0.00 & 0.88 & 6.02 & 15.40 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+\subsection{Ablation}
+\noindent
+
+\textbf{Layer-wise separation analysis:}
+\label{sec:layer_analysis}
+We measure cosine divergence between WMDP~\cite{li2024wmdp} and refusal MLP activations across layers of Llama-3-8B, as shown in Figure~\ref{fig:layer_divergence}. Layer~7 achieves the highest separation (0.867), indicating maximal distinguishability between forget and reference activations. Table~\ref{tab:layer_ablation} confirms that intervening at Layer~7 alone matches all-layer redirection in both forgetting and retention, while achieving a $\sim$3.8$\times$ speedup (91s vs.\ 347s).
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth, trim=10 10 10 10, clip]{images/layer_divergence_wmdp.png}
+        \caption{\small WMDP (forget set)}
+        \label{fig:div-wmdp}
+    \end{subfigure}
+    \hspace{0.5em}
+    \begin{subfigure}[b]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth, trim=10 10 10 10, clip]{images/layer_divergence_mmlu.png}
+        \caption{\small MMLU (retain set)}
+        \label{fig:div-mmlu}
+    \end{subfigure}
+    \caption{\footnotesize Layer-wise cosine divergence ($1 - \cos$) between prompt activations and the refusal (\textit{``I don't know''}) representation in Llama-3.2-1B. Separation peaks in the mid-network (layer~6), which we select as the intervention point.}
+    \label{fig:layer_divergence}
+\end{figure}
+
+\noindent
+\textbf{Rank analysis:}
+STAMP-LR decomposes $\mathbf{X} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~\ref{sec:stamp}). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. STAMP-LR remains stable and effective for $r \geq 64$. Below this threshold, unlearning becomes incomplete, with residual forget scores, as the low-rank approximation lacks sufficient capacity to capture the full activation structure. All experiments are conducted on the personal data erasure task.
+
+\begin{table}[h!]
+\centering
+\caption{Effect of rank $r$ on STAMP-LR performance on Llama-3-8B.}
+\label{tab:rank_analysis}
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c|cccc}
+\Xhline{1.15pt}
+\textbf{Rank ($r$)} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (mins)} \\
+\Xhline{1.15pt}
+\rowcolor{gray!15}
+8   & 0.00 & 0.72 & 6.83 & 3.15 \\
+16  & 0.00 & 0.78 & 6.45 & 3.00 \\
+\rowcolor{gray!15}
+32  & 0.00 & 0.82 & 6.21 & 3.54 \\
+64  & 0.00 & 0.85 & 6.10 & 4.01 \\
+\rowcolor{gray!15}
+128 & 0.00 & 0.88 & 6.07 & 5.24 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Retain ratio:}
+For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR’s sensitivity Table~\ref{tab:retain_ratio}. Performance remains stable even when $\mathcal{D}_r$ is reduced to 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$. All experiments are conducted on the personal data erasure task.
+
+\begin{table}[H]
+\centering
+\caption{Effect of retain ratio on STAMP-LR performance on Llama-3-8B.}
+\label{tab:retain_ratio}
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\columnwidth}{c|>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+\Xhline{1.15pt}
+\textbf{Retain Ratio} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (s)} \\
+\Xhline{1.15pt}
+0.10 & 0.00 & 0.88 & 8.83 & 3.12 \\
+\rowcolor{gray!15}
+0.25 & 0.00 & 0.89 & 8.21 & 3.38 \\
+0.50 & 0.00 & 0.87 & 8.74 & 3.61 \\
+\rowcolor{gray!15}
+0.75 & 0.00 & 0.90 & 7.32 & 3.85 \\
+1.00 & 0.00 & 0.90 & 7.07 & 4.01 \\
+\Xhline{1.15pt}
+\end{tabularx}
+\end{table}
+
+
+\noindent
+\textbf{Single-sample unlearning analysis:}
+A core requirement of IMU is single-sample forgetting. Table~\ref{tab:single_sample} evaluates all methods under $|\mathcal{D}_f| = 1$ on the harmful knowledge removal task using Llama-3-8B. All baselines are trained for one epoch.
+
+\begin{table}[h!]
+\centering
+\caption{Single-sample unlearning comparison on Llama-3-8B for harmful knowledge removal ($|\mathcal{D}_f| = 1$).}
+\small
+\label{tab:single_sample}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|ccc}
+\Xhline{1.15pt}
+\textbf{Method} & $Acc_f\!\downarrow$ & $Acc_r\!\uparrow$ & \textbf{Utility}$\downarrow$ \\
+\Xhline{1.15pt}
+GA~\cite{yao2024large}        & 100 & 42.17 & 6.02  \\
+\rowcolor{gray!15}
+NPO~\cite{zhang2024negative}  & 100 & 48.93 & 5.45  \\
+RMU~\cite{li2024wmdp}         & 100 & 39.27 & 6.25  \\
+\rowcolor{gray!15}
+FLAT~\cite{wang2024llm}       & 100 & 51.63 & 6.05  \\
+WGA~\cite{wang2025rethinking} & 100 & 44.51 & 6.13  \\
+\rowcolor{gray!15}
+ASU~\cite{zade2026attention}  & 100 & 53.12 & 5.48 \\
+\midrule\midrule
+STAMP                         & 0.00 & 70.13 & 6.55  \\
+STAMP-LR                      & 0.00 & 73.27 & 7.00  \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+
+Training-based baselines fail entirely, i.e., $Acc_f$ remains at 100, as the single-sample gradient signal is overwhelmed by the retain set. In contrast, STAMP and STAMP-LR achieve $Acc_f = 0.00$ with $Acc_r > 70$, confirming their effectiveness for single-sample IMU.
+
+
+\subsection*{Robustness to Query Reformulation}
+Table~4 queries the forgotten entity identically before and after unlearning. To test whether forgetting generalizes, we sample 200 items from the personal data erasure task and use Mistral-7B to generate, per item, a \textbf{paraphrase}, an \textbf{aspect-shifted} query (different attribute, same entity), and an \textbf{indirect} query (entity unnamed, attribute required). We report $F\text{-}RL{\downarrow}$ and $R\text{-}RL{\uparrow}$ for both variants.
+
+\begin{table}[htbp]
+\centering
+\caption{Robustness to query reformulation (personal data erasure).}
+\label{tab:robustness}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Query Type} & \multicolumn{2}{c|}{\textbf{STAMP}} & \multicolumn{2}{c}{\textbf{STAMP-LR}} \\
+ & F-RL$\downarrow$ & R-RL$\uparrow$ & F-RL$\downarrow$ & R-RL$\uparrow$ \\
+\midrule
+Original    & 0.00 & 0.79 & 0.00 & 0.88 \\
+Paraphrase  & 0.04 & 0.77 & 0.03 & 0.86 \\
+Aspect-shift& 0.09 & 0.75 & 0.07 & 0.84 \\
+Indirect    & 0.21 & 0.71 & 0.18 & 0.80 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both variants degrade only mildly under paraphrasing, confirming the refusal subspace is not overfit to prompt wording. Leakage rises with indirectness, peaking on indirect queries (0.21/0.18), where the target is never named. STAMP-LR is consistently more robust, likely due to its broader low-rank subspace.
