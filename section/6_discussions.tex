@@ -1,9 +1,8 @@
-\section{Limitations and Future Work}
-This work introduces Interactive Machine Unlearning (IMU) and proposes the RePAIR framework built on STAMP, a training-free, single-sample unlearning method with two variants (STAMP and STAMP-LR). Despite its effectiveness, a few limitations remain.
-
-
-\noindent
-\textbf{Retain data at inference time:} Although STAMP operates with as little as a 10\% retain ratio (Table~\ref{tab:retain_ratio}), it still requires a small replay buffer $\mathcal{D}_r$ to preserve retained knowledge. Storing this buffer on edge devices at inference time is non-trivial and may violate GDPR and CCPA constraints. Methods such as FLAT~\cite{wang2024llm} operate using only $\mathcal{D}_f$ without any replay buffer, suggesting a promising direction toward fully retain-free unlearning, which we leave as future work.
+\section{Limitations}
+This work introduces Interactive Machine Unlearning (IMU) and proposes the RePAIR framework built on STAMP, a training-free, single-sample unlearning method with two variants (STAMP and STAMP-LR). Despite its effectiveness, several limitations remain.
 
 \noindent
-\textbf{Resource constraints at test time:} As shown in Table~\ref{tab:cost_comparison}, training-based methods require significantly more GPU memory than is typically available at inference. While STAMP-LR substantially reduces computational cost, extending the framework to multimodal settings remains an important direction for future work.
+\textbf{Retain data at inference time.} Although STAMP operates with as little as a 10\% retain ratio (Table~\ref{tab:retain_ratio}), it still requires a small replay buffer $\mathcal{D}_r$ to preserve retained knowledge. Storing this buffer on an edge device at inference time is non-trivial, and it sits uneasily with the GDPR and CCPA motivation on which the framework rests, since the user must keep a slice of the very data the system is meant to remove. Methods such as FLAT~\cite{wang2024llm} operate using $\mathcal{D}_f$ alone and require no replay buffer at all.
+
+\noindent
+\textbf{Resource constraints at test time.} As shown in Table~\ref{tab:cost_comparison}, training-based methods require significantly more GPU memory than is typically available at inference. STAMP-LR substantially reduces this cost, but the full RePAIR pipeline still orchestrates three models in the 7B to 8B parameter range, which remains beyond the memory budget of most edge hardware.
