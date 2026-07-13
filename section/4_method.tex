@@ -4,7 +4,7 @@ We propose \textbf{RePAIR}, a framework for interactive machine unlearning with 
 \begin{figure}[h!]
 \centering
 \includegraphics[width=0.65\linewidth]{images/interactive-Page-4.drawio.png}
-\caption{SwiGLU MLP architecture in Llama-3-8B. STAMP updates \emph{only} the down-projection $W_{\mathrm{down}}$ via a pseudoinverse update; the gate and up projections $W_{\mathrm{gate}}$ and $W_{\mathrm{up}}$ remain frozen. Because the block output is linear in the post-activation intermediate $h$, i.e.\ $o = W_{\mathrm{down}} h$, the update admits an exact closed form without inverting the SiLU nonlinearity.}
+\caption{SwiGLU MLP in Llama-3-8B. STAMP updates only the down-projection $W_{\mathrm{down}}$ and freezes $W_{\mathrm{gate}}$ and $W_{\mathrm{up}}$. As the output is linear in the post-activation intermediate $h$, with $o = W_{\mathrm{down}} h$, the update has an exact closed form and never inverts the SiLU nonlinearity.}
 \label{fig:mlp_architecture}
 \end{figure}
 
@@ -22,40 +22,40 @@ h = \sigma(W_{\mathrm{gate}}\, x) \odot (W_{\mathrm{up}}\, x) \in \mathbb{R}^{m}
 o = W_{\mathrm{down}} \cdot h \in \mathbb{R}^{d}
 \label{eq:mlp}
 \end{equation}
-where $x \in \mathbb{R}^{d}$ is the layer input, $h$ is the \textit{post-activation intermediate}, $\sigma$ is the SiLU activation, and $\odot$ denotes element-wise multiplication. Throughout, $d$ denotes the residual-stream width and $m$ the (larger) FFN intermediate width, so that $W_{\mathrm{gate}}, W_{\mathrm{up}} \in \mathbb{R}^{m \times d}$ and $W_{\mathrm{down}} \in \mathbb{R}^{d \times m}$; for Llama-3-8B, $d = 4096$ and $m = 14336$. Distinguishing $d$ from $m$ is essential: the solve below operates in $\mathbb{R}^{m}$, not $\mathbb{R}^{d}$.
+where $x \in \mathbb{R}^{d}$ is the layer input, $h$ is the \textit{post-activation intermediate}, $\sigma$ is the SiLU activation, and $\odot$ denotes element-wise multiplication. Throughout, $d$ denotes the residual-stream width and $m$ the larger FFN intermediate width, so that $W_{\mathrm{gate}}, W_{\mathrm{up}} \in \mathbb{R}^{m \times d}$ and $W_{\mathrm{down}} \in \mathbb{R}^{d \times m}$. For Llama-3-8B, $d = 4096$ and $m = 14336$. Distinguishing $d$ from $m$ is essential, because the solve below operates in $\mathbb{R}^{m}$ rather than in $\mathbb{R}^{d}$.
 
-Equation~\eqref{eq:mlp} makes the structure STAMP exploits explicit: while the map from $x$ to $h$ is nonlinear, the map from $h$ to the block output $o$ is \emph{exactly linear}, and $W_{\mathrm{down}}$ is the only matrix whose output \emph{is} the MLP output. STAMP therefore applies its closed-form pseudoinverse update to $W_{\mathrm{down}}$ alone, holding $W_{\mathrm{gate}}$ and $W_{\mathrm{up}}$ frozen and treating $h$ as the observed input to the solve. The remaining two matrices are unsuitable targets: $W_{\mathrm{gate}}$ acts inside $\sigma(\cdot)$ and would require inverting the SiLU nonlinearity, while $W_{\mathrm{up}}$ reaches the output only through the input-dependent gate, as $o = W_{\mathrm{down}}\,\mathrm{diag}(\sigma(W_{\mathrm{gate}}x))\,W_{\mathrm{up}}\,x$. Restricting the update to $W_{\mathrm{down}}$ thus keeps the solution exact rather than approximate.
+Equation~\eqref{eq:mlp} makes the structure that STAMP exploits explicit. While the map from $x$ to $h$ is nonlinear, the map from $h$ to the block output $o$ is exactly linear, and $W_{\mathrm{down}}$ is the only matrix whose output is itself the MLP output. STAMP therefore applies its closed-form pseudoinverse update to $W_{\mathrm{down}}$ alone, holding $W_{\mathrm{gate}}$ and $W_{\mathrm{up}}$ frozen and treating $h$ as the observed input to the solve. The remaining two matrices are unsuitable targets. The gate projection $W_{\mathrm{gate}}$ acts inside $\sigma(\cdot)$ and would require inverting the SiLU nonlinearity, while $W_{\mathrm{up}}$ reaches the output only through the input-dependent gate, as $o = W_{\mathrm{down}}\,\mathrm{diag}(\sigma(W_{\mathrm{gate}}x))\,W_{\mathrm{up}}\,x$. Restricting the update to $W_{\mathrm{down}}$ keeps the solution exact rather than approximate.
 
-We target the feed-forward block specifically because factual and world knowledge in transformer LLMs is predominantly stored and recalled through MLP/FFN layers, which act as key-value memories, rather than through attention, which primarily routes information between tokens; steering the FFN output is therefore a more direct lever for suppressing a specific fact than intervening on attention. Moreover, this update rule is architecture-agnostic: STAMP requires only that the targeted layer expose a linear map $o = W \cdot h$ from an observable post-activation intermediate $h$ to the block output $o$. Every feed-forward block---gated or not---exposes exactly one such matrix, namely its down-projection: this is $W_{\mathrm{down}}$ in SwiGLU (Llama, Mistral) and GeGLU (T5-v1.1, PaLM) blocks, and the second linear layer $W_2$ in a standard ReLU- or GELU-activated FFN, $o = W_2\,\phi(W_1 x + b_1)$. STAMP therefore applies unchanged to any such block, and not exclusively to SwiGLU.
+We target the feed-forward block because factual and world knowledge in transformer LLMs is predominantly stored and recalled through MLP layers, which act as key-value memories, rather than through attention, which mainly routes information between tokens. Steering the FFN output is therefore a more direct lever for suppressing a specific fact than intervening on attention. The update rule is also architecture-agnostic. STAMP requires only that the targeted layer expose a linear map $o = W \cdot h$ from an observable post-activation intermediate $h$ to the block output $o$, and every feed-forward block, gated or not, exposes exactly one such matrix, namely its down-projection. It is $W_{\mathrm{down}}$ in SwiGLU (Llama, Mistral) and GeGLU (T5-v1.1, PaLM) blocks, and the second linear layer $W_2$ in a standard ReLU- or GELU-activated FFN of the form $o = W_2\,\phi(W_1 x + b_1)$. STAMP therefore applies unchanged to any such block and not only to SwiGLU.
 
 Given the forget pair $(p_f, r_f)$ extracted by $\mathcal{M}_{\textit{watchdog}}$, we construct the forget set $\mathcal{D}_f = \{(p_f, r_f)\}$ and the retain buffer $\mathcal{D}_r$ (Section~\ref{sec:PS}), along with a reference set $\mathcal{D}_{\textit{ref}}$ of natural refusal prompts. Notably, $\mathcal{D}_f$ can consist of a single sample, where most existing methods fail, whereas STAMP operates effectively at this granularity. 
 
-At layer $l$ we extract, for all three sets, both quantities appearing in Eq.~\eqref{eq:mlp}: the post-activation intermediate $h_l(x) \in \mathbb{R}^{m}$, which serves as the input to the solve, and the block output $\mathrm{MLP}_l(x) \in \mathbb{R}^{d}$, in which the steering target is defined. Since base models such as Llama-3-8B~\cite{grattafiori2024llama} lack explicit refusal training, we exploit their tendency to echo inputs: prompting with ``I don't know'' produces consistent refusal-style activations without additional training. The steering vector, encoding the direction from forget to refusal in output space, is computed as:
+At layer $l$ we extract, for all three sets, both quantities appearing in Eq.~\eqref{eq:mlp}. The post-activation intermediate $h_l(x) \in \mathbb{R}^{m}$ serves as the input to the solve, and the block output $\mathrm{MLP}_l(x) \in \mathbb{R}^{d}$ is the space in which the steering target is defined. Since base models such as Llama-3-8B~\cite{grattafiori2024llama} lack explicit refusal training, we exploit their tendency to echo inputs. Prompting with ``I don't know'' produces consistent refusal-style activations without additional training. The steering vector, which encodes the direction from forget to refusal in output space, is computed as
 \begin{equation}
 \mathbf{r}_{\mathrm{\textit{SV}}} = \frac{1}{|\mathcal{D}_{\mathrm{ref}}|} \sum_{x \in \mathcal{D}_{\mathrm{ref}}} \mathrm{MLP}_l(x) - \frac{1}{|\mathcal{D}_f|} \sum_{x \in \mathcal{D}_f} \mathrm{MLP}_l(x) \in \mathbb{R}^{d}
 \label{eq:steering_vector}
 \end{equation}
 
-Using $\mathbf{r}_{\textit{SV}}$, we construct target outputs by redirecting forget activations toward the refusal subspace while leaving retain activations unchanged. Over the $n$ samples drawn from $\mathcal{D}_f$, $\mathcal{D}_r$, and $\mathcal{D}_{\textit{ref}}$, we stack the post-activation intermediates row-wise into $\mathbf{H} = [h_l(x_1); \ldots; h_l(x_n)] \in \mathbb{R}^{n \times m}$, and compute desired outputs as follows: if $x \in \mathcal{D}_f$, then $\mathbf{o}'(x) = \mathrm{MLP}_l(x) + \mathbf{r}_{\textit{SV}}$; otherwise, $\mathbf{o}'(x) = \mathrm{MLP}_l(x)$ remains unchanged. The final target matrix $O' \in \mathbb{R}^{n \times d}$ is obtained by stacking all $\mathbf{o}'(x)$.
+Using $\mathbf{r}_{\textit{SV}}$ we construct the target outputs, redirecting the forget activations toward the refusal subspace while leaving the retain activations unchanged. Over the $n$ samples drawn from $\mathcal{D}_f$, $\mathcal{D}_r$, and $\mathcal{D}_{\textit{ref}}$, we stack the post-activation intermediates row-wise into $\mathbf{H} = [h_l(x_1), \ldots, h_l(x_n)] \in \mathbb{R}^{n \times m}$. For $x \in \mathcal{D}_f$ we set $\mathbf{o}'(x) = \mathrm{MLP}_l(x) + \mathbf{r}_{\textit{SV}}$, and otherwise we leave $\mathbf{o}'(x) = \mathrm{MLP}_l(x)$ unchanged. Stacking all $\mathbf{o}'(x)$ gives the target matrix $O' \in \mathbb{R}^{n \times d}$.
 
-Writing $W := W_{\mathrm{down}}^{\top} \in \mathbb{R}^{m \times d}$ to match this row-wise convention, Eq.~\eqref{eq:mlp} gives the stacked MLP outputs as a single linear system:
+Writing $W := W_{\mathrm{down}}^{\top} \in \mathbb{R}^{m \times d}$ to match this row-wise convention, Eq.~\eqref{eq:mlp} gives the stacked MLP outputs as a single linear system
 \begin{equation}
 O = \mathbf{H} \cdot W_{\mathrm{old}}, \qquad O \in \mathbb{R}^{n \times d}
 \end{equation}
-We seek $W_{\mathrm{new}}$ such that:
+We seek $W_{\mathrm{new}}$ such that
 \begin{equation}
 \mathbf{H} \cdot W_{\mathrm{new}} = O'
 \label{eq:linear_system}
 \end{equation}
-whose naive solution would require an inverse of $\mathbf{H}$:
+whose naive solution would require an inverse of $\mathbf{H}$,
 \begin{equation}
 W_{\mathrm{new}} = \mathbf{H}^{-1} O'
 \end{equation}
-This is ill-posed: $\mathbf{H} \in \mathbb{R}^{n \times m}$ is rectangular and, in the single-sample regime that IMU demands, severely rank-deficient ($n \ll m$), so no exact inverse exists.
+This is ill-posed. The matrix $\mathbf{H} \in \mathbb{R}^{n \times m}$ is rectangular and, in the single-sample regime that IMU demands, severely rank-deficient ($n \ll m$), so no exact inverse exists.
 
 \input{section/8_values}
 
-To resolve this without additional samples, we solve Eq.~\eqref{eq:linear_system} in the least-squares sense via the Moore-Penrose pseudoinverse:
+To resolve this without additional samples, we solve Eq.~\eqref{eq:linear_system} in the least-squares sense using the Moore-Penrose pseudoinverse,
 \begin{equation}
 \mathbf{H}^{+} = (\mathbf{H}^\top \mathbf{H} + \lambda I)^{-1} \mathbf{H}^\top
 \end{equation}
@@ -63,9 +63,9 @@ To resolve this without additional samples, we solve Eq.~\eqref{eq:linear_system
 W_{\mathrm{new}} = \mathbf{H}^{+} \cdot O'
 \end{equation}
 
-This yields the minimum-norm solution and completes STAMP: the forget activations are redirected to the refusal subspace, the retain activations are held fixed, and no gradient is ever computed. Its cost, however, is dictated entirely by the $m \times m$ system it must form and invert. Computing $(\mathbf{H}^\top \mathbf{H} + \lambda I)^{-1} \in \mathbb{R}^{m \times m}$ requires $\mathcal{O}(m^3)$ operations, and---more restrictively---materializing the Gram matrix occupies $\mathcal{O}(m^2)$ memory, roughly $822$\,MB in single precision for Llama-3-8B. Both costs are governed by the FFN width $m$ and are therefore paid in full even when a single sample is being forgotten. This is exactly the wrong scaling for the interactive, on-device setting that IMU targets, and it motivates our second solution.
+This yields the minimum-norm solution and completes STAMP. The forget activations are redirected to the refusal subspace, the retain activations are held fixed, and no gradient is ever computed. The cost, however, is dictated entirely by the $m \times m$ system that must be formed and inverted. Computing $(\mathbf{H}^\top \mathbf{H} + \lambda I)^{-1} \in \mathbb{R}^{m \times m}$ requires $\mathcal{O}(m^3)$ operations, and, more restrictively, materializing the Gram matrix occupies $\mathcal{O}(m^2)$ memory, roughly $822$\,MB in single precision for Llama-3-8B. Both costs are governed by the FFN width $m$ and are therefore paid in full even when a single sample is being forgotten. This is the wrong scaling for the interactive, on-device setting that IMU targets, and it motivates our second solution.
 
-\textbf{STAMP-LR: Low-Rank Solution:} The inefficiency above arises from solving in the full $m$-dimensional space even though $\mathbf{H}$ has rank at most $n \ll m$. We therefore approximate $\mathbf{H} \approx A B$, where $A \in \mathbb{R}^{n \times r}$ and $B \in \mathbb{R}^{r \times m}$, with $r \ll m$:
+\textbf{STAMP-LR (Low-Rank Solution).} The inefficiency above arises from solving in the full $m$-dimensional space even though $\mathbf{H}$ has rank at most $n \ll m$. We therefore approximate $\mathbf{H} \approx A B$, where $A \in \mathbb{R}^{n \times r}$ and $B \in \mathbb{R}^{r \times m}$, with $r \ll m$,
 \begin{equation}
 A^{+} = (A^\top A)^{-1} A^\top, \quad
 B^{+} = B^\top (B B^\top)^{-1}
@@ -74,11 +74,11 @@ B^{+} = B^\top (B B^\top)^{-1}
 W_{\mathrm{new}} = B^{+} \cdot A^{+} \cdot O'
 \end{equation}
 
-Because the solve is now carried out in the $r$-dimensional subspace rather than in $\mathbb{R}^{m}$, only the small $r \times r$ systems $A^{\top}A$ and $BB^{\top}$ are inverted. This reduces the update to $\mathcal{O}(r^3 + r^2 \cdot m)$ time and $\mathcal{O}(r(n + m))$ memory---under $4$\,MB at $r = 64$, against the $822$\,MB required by STAMP---while leaving the closed-form, gradient-free character of the method intact. STAMP-LR is thus the variant we deploy for on-device unlearning.
+Because the solve is now carried out in the $r$-dimensional subspace rather than in $\mathbb{R}^{m}$, only the small $r \times r$ systems $A^{\top}A$ and $BB^{\top}$ are inverted. This reduces the update to $\mathcal{O}(r^3 + r^2 \cdot m)$ time and $\mathcal{O}(r(n + m))$ memory, which is under $4$\,MB at $r = 64$ against the $822$\,MB required by STAMP, while leaving the closed-form and gradient-free character of the method intact. STAMP-LR is therefore the variant we deploy for on-device unlearning.
 
 \begin{table}[t]
 \centering
-\caption{Cost of a single-layer intervention. STAMP and STAMP-LR are training-free; all baselines require backpropagation. For STAMP and STAMP-LR the first term is the forward pass, the second the closed-form solve.}
+\caption{Cost of a single-layer intervention. STAMP and STAMP-LR are training-free, while all baselines require backpropagation. For STAMP and STAMP-LR the first term is the forward pass and the second the closed-form solve.}
 \label{tab:cost_comparison}
 \small
 \renewcommand{\arraystretch}{1.25}
@@ -100,9 +100,9 @@ LoRA (1 layer) & $\mathcal{O}(E\,n\,r\,d)$ & Model $+\,2\,r\,d$ \\
 \subsection{Memory and Computational Analysis}
 Table~\ref{tab:cost_comparison} summarizes the trade-offs. A forward pass through one MLP layer costs $\mathcal{O}(d \cdot m)$, while a backward pass costs approximately $2\times$ that of the forward pass. Full fine-tuning over $n$ samples for $E$ epochs across $L$ layers therefore requires $\mathcal{O}(E \cdot n \cdot L \cdot d \cdot m)$ computation and approximately $6\times$ model memory, since weights, gradients, and optimizer moments must all be held. LoRA reduces the update cost to $\mathcal{O}(E \cdot n \cdot L \cdot r \cdot d)$, but still requires backpropagation.
 
-STAMP replaces training with two gradient-free stages, which we state separately to avoid conflating them. \textit{(i) Activation collection:} a single forward pass over the $n$ samples of $\mathcal{D}_f \cup \mathcal{D}_r \cup \mathcal{D}_{\textit{ref}}$ yields $\mathbf{H}$ and $O'$ at a cost of $\mathcal{O}(n \cdot d \cdot m)$, with no backward pass. \textit{(ii) Closed-form solve:} the pseudoinverse update of Section~\ref{sec:stamp} costs $\mathcal{O}(m^{3})$ for STAMP and $\mathcal{O}(r^{3} + r^{2} \cdot m)$ for STAMP-LR. The single forward pass is what makes STAMP \textit{training-free}; the solve is what determines its \textit{update cost}. The two are distinct quantities, and neither alone characterizes the method.
+STAMP replaces training with two gradient-free stages, which we state separately to avoid conflating them. The first stage is \textit{activation collection}, a single forward pass over the $n$ samples of $\mathcal{D}_f \cup \mathcal{D}_r \cup \mathcal{D}_{\textit{ref}}$ that yields $\mathbf{H}$ and $O'$ at a cost of $\mathcal{O}(n \cdot d \cdot m)$ and requires no backward pass. The second stage is the \textit{closed-form solve}, the pseudoinverse update of Section~\ref{sec:stamp}, which costs $\mathcal{O}(m^{3})$ for STAMP and $\mathcal{O}(r^{3} + r^{2} \cdot m)$ for STAMP-LR. The single forward pass is what makes STAMP training-free, whereas the solve is what determines its update cost. The two are distinct quantities, and neither alone characterizes the method.
 
-The variants differ most sharply in memory. STAMP must materialize the Gram matrix $\mathbf{H}^{\top}\mathbf{H} \in \mathbb{R}^{m \times m}$, which for Llama-3-8B occupies roughly $822$\,MB in single precision. STAMP-LR instead stores only the low-rank factors $A \in \mathbb{R}^{n \times r}$ and $B \in \mathbb{R}^{r \times m}$, i.e.\ $\mathcal{O}(r(n + m))$; at $r = 64$ this is under $4$\,MB, a reduction of over $200\times$. It is this memory gap, rather than the asymptotic time complexity alone, that makes on-device unlearning practical.
+The variants differ most sharply in memory. STAMP must materialize the Gram matrix $\mathbf{H}^{\top}\mathbf{H} \in \mathbb{R}^{m \times m}$, which for Llama-3-8B occupies roughly $822$\,MB in single precision. STAMP-LR instead stores only the low-rank factors $A \in \mathbb{R}^{n \times r}$ and $B \in \mathbb{R}^{r \times m}$, that is $\mathcal{O}(r(n + m))$. At $r = 64$ this is under $4$\,MB, a reduction of over $200\times$. It is this memory gap, rather than the asymptotic time complexity alone, that makes on-device unlearning practical.
 
 Finally, we note that the runtimes reported in Table~\ref{tab:STAMP-Comparison} measure end-to-end wall-clock time, which includes activation collection and evaluation overhead common to both variants. The asymptotic gap between the two solves therefore does not translate proportionally into measured speedup.
 

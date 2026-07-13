@@ -7,7 +7,7 @@ For WMDP~\cite{li2024wmdp} and MMLU~\cite{hendrycks2020measuring}, we report for
 \textbf{Benchmarks and Models:}
 STAMP is evaluated on three unlearning tasks: (i) harmful knowledge suppression using 1K WMDP-Bio~\cite{li2024wmdp} samples, (ii) misinformation removal using 1K MMLU~\cite{hendrycks2020measuring} questions with corrupted ground truth, and (iii) personal data erasure using 2K synthetic biographical profiles generated via the Mistral-7B API~\cite{Jiang2023Mistral7}. Each dataset is split equally into $\mathcal{D}_f$ and $\mathcal{D}_r$, with a shared $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts for steering vector computation Section~\ref{sec:stamp}. 
 
-For both WMDP and MMLU, we use reduced subsets and train the model to generate free-form answers rather than selecting from MCQ options; therefore, reported accuracies are not directly comparable to standard MCQ-based results~\cite{grattafiori2024llama}. Llama-3-8B~\cite{grattafiori2024llama} serves as $\mathcal{M}_{\textit{patient}}$, Mistral-7B~\cite{Jiang2023Mistral7} as $\mathcal{M}_{\textit{watchdog}}$ for intent classification and forget-pair extraction, and Qwen2.5-Coder-7B-Instruct~\cite{hui2024qwen2} as $\mathcal{M}_{\textit{surgeon}}$ for repair code generation. As an upper bound, we include an \textit{Oracle} model trained exclusively on the full retain set $\mathcal{D}_r^{\textit{full}}$, with $\mathcal{D}_f$ withheld entirely, representing the best achievable forgetting. Six baselines are compared: GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, RMU~\cite{li2024wmdp}, FLAT~\cite{wang2024llm}, WGA~\cite{wang2025rethinking}, and ASU~\cite{zade2026attention}. Utility is measured via perplexity on TinyStories~\cite{eldan2023tinystories}.
+For both WMDP and MMLU, we use reduced subsets and train the model to generate free-form answers rather than selecting from MCQ options. Reported accuracies are therefore not directly comparable to standard MCQ-based results~\cite{grattafiori2024llama}. Llama-3-8B~\cite{grattafiori2024llama} serves as $\mathcal{M}_{\textit{patient}}$, Mistral-7B~\cite{Jiang2023Mistral7} as $\mathcal{M}_{\textit{watchdog}}$ for intent classification and forget-pair extraction, and Qwen2.5-Coder-7B-Instruct~\cite{hui2024qwen2} as $\mathcal{M}_{\textit{surgeon}}$ for repair code generation. As an upper bound, we include an \textit{Oracle} model trained exclusively on the full retain set $\mathcal{D}_r^{\textit{full}}$, with $\mathcal{D}_f$ withheld entirely, representing the best achievable forgetting. Six baselines are compared: GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, RMU~\cite{li2024wmdp}, FLAT~\cite{wang2024llm}, WGA~\cite{wang2025rethinking}, and ASU~\cite{zade2026attention}. Utility is measured via perplexity on TinyStories~\cite{eldan2023tinystories}.
 \begin{table}[h!]
 \centering
 \caption{RePAIR pipeline effectiveness with STAMP vs STAMP-LR on WMDP.}
@@ -95,7 +95,7 @@ We present qualitative examples of the RePAIR framework in Table~\ref{tab:qualit
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{l|cccc}
 \Xhline{1.15pt}
-\textbf{Setting} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (s)} \\
+\textbf{Setting} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (min)} \\
 \Xhline{1.15pt}
 Layer~7 only     & 0.00 & 0.85 & 6.07 & 4.36 \\
 \rowcolor{gray!15}
@@ -108,7 +108,7 @@ All layers       & 0.00 & 0.88 & 6.02 & 15.40 \\
 
 \textbf{Layer-wise separation analysis:}
 \label{sec:layer_analysis}
-We measure cosine divergence between WMDP~\cite{li2024wmdp} and refusal MLP activations across layers of Llama-3-8B, as shown in Figure~\ref{fig:layer_divergence}. Layer~7 achieves the highest separation (0.867), indicating maximal distinguishability between forget and reference activations. Table~\ref{tab:layer_ablation} confirms that intervening at Layer~7 alone matches all-layer redirection in forgetting ($F\text{-}RL = 0.00$ in both settings) at a marginal retention cost ($R\text{-}RL$ of 0.85 vs.\ 0.88), while achieving a $\sim$3.5$\times$ speedup (4.36\,s vs.\ 15.40\,s).
+We measure cosine divergence between WMDP~\cite{li2024wmdp} and refusal MLP activations across layers of Llama-3-8B, as shown in Figure~\ref{fig:layer_divergence}. Layer~7 achieves the highest separation (0.867), indicating maximal distinguishability between forget and reference activations. Table~\ref{tab:layer_ablation} confirms that intervening at Layer~7 alone matches all-layer redirection in forgetting ($F\text{-}RL = 0.00$ in both settings) at a marginal retention cost ($R\text{-}RL$ of 0.85 vs.\ 0.88), while achieving a $\sim$3.5$\times$ speedup (4.36 vs.\ 15.40 minutes).
 
 \begin{figure}[htbp]
     \centering
@@ -141,7 +141,7 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{c|cccc}
 \Xhline{1.15pt}
-\textbf{Rank ($r$)} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (mins)} \\
+\textbf{Rank ($r$)} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (min)} \\
 \Xhline{1.15pt}
 \rowcolor{gray!15}
 8   & 0.00 & 0.72 & 6.83 & 3.15 \\
@@ -167,7 +167,7 @@ For edge deployment, storing a large retain set is impractical under GDPR and CC
 \renewcommand{\arraystretch}{1.3}
 \begin{tabularx}{\columnwidth}{c|>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
 \Xhline{1.15pt}
-\textbf{Retain Ratio} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (s)} \\
+\textbf{Retain Ratio} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (min)} \\
 \Xhline{1.15pt}
 0.10 & 0.00 & 0.88 & 8.83 & 3.12 \\
 \rowcolor{gray!15}
