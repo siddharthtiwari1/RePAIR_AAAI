@@ -53,26 +53,7 @@ W_{\mathrm{new}} = \mathbf{H}^{-1} O'
 \end{equation}
 This is ill-posed: $\mathbf{H} \in \mathbb{R}^{n \times m}$ is rectangular and, in the single-sample regime that IMU demands, severely rank-deficient ($n \ll m$), so no exact inverse exists.
 
-\begin{table}[htbp]
-\centering
-\caption{Memory and computational cost for a single-layer intervention. For STAMP and STAMP-LR, the first complexity term is the \emph{single forward pass} that collects activations and the second is the \emph{closed-form solve}; these are distinct stages. Memory denotes the workspace required beyond the model weights. $d$ and $m$ are the residual-stream and FFN intermediate widths (4096 and 14336 for Llama-3-8B).}
-\label{tab:cost_comparison}
-\small
-\renewcommand{\arraystretch}{1.3}
-\begin{tabularx}{\columnwidth}{l|>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
-\Xhline{1.15pt}
-\textbf{Method} & \textbf{Time Complexity} & \textbf{Memory} & \textbf{Training-Free} \\
-\Xhline{1.15pt}
-Full FT & $\mathcal{O}(E n L\, d m)$ & $\sim6\times$ model & No \\
-\rowcolor{gray!15}
-LoRA (all $L$) & $\mathcal{O}(E n L\, r\, d)$ & Model $+\, 2rLd$ & No \\
-LoRA (1 layer) & $\mathcal{O}(E n\, r\, d)$ & Model $+\, 2r d$ & No \\
-\rowcolor{gray!15}
-\textbf{STAMP} & $\mathcal{O}(n\, d m + m^{3})$ & $m^{2}$ & Yes \\
-\textbf{STAMP-LR} & $\mathcal{O}(n\, d m + r^{3} + r^{2} m)$ & $r(n + m)$ & Yes \\
-\Xhline{1.15pt}
-\end{tabularx}
-\end{table}
+
 
 Table~\ref{tab:cost_comparison} summarizes the computational and memory trade-offs across methods.
 
