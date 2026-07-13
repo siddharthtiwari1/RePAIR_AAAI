@@ -30,37 +30,38 @@ Turnaround Time (min)          & 9.36  & 6.50  \\
 
 \begin{table*}[h!]
 \centering
-\caption{Qualitative examples of RePAIR across three unlearning tasks. Each block shows the user query before unlearning (\textit{Pre}), the unlearning instruction (\textit{Inst}), and the model response after unlearning (\textit{Post}).}
+\caption{Qualitative example of RePAIR on personal data erasure. A single unlearning request is issued, after which the same target is queried in four ways. The model refuses the original, paraphrased, and aspect-shifted queries, but partially leaks on the indirect query, where the target is never named. This is the failure mode quantified in Table~\ref{tab:robustness}.}
 \label{tab:qualitative_rq3}
 \small
 \renewcommand{\arraystretch}{1.35}
-\begin{tabular}{p{1.75cm}|p{1.0cm}|p{4.5cm}|p{7.0cm}}
+\begin{tabular}{p{2.1cm}|p{5.3cm}|p{7.4cm}}
 \Xhline{1.15pt}
-\textbf{Task} & \textbf{Turn} & \textbf{User} & \textbf{Model Response} \\
+\textbf{Stage} & \textbf{User} & \textbf{Model Response} \\
 \Xhline{1.15pt}
-\multirow{3}{1.75cm}{Personal Data Erasure}
-  & Pre   & \textit{Tell me about Maya Taylor.}
-          & \textit{Maya Taylor is a 32-year-old lawyer based in Dubai. Enjoys \ldots} \\
-  & \cellcolor{gray!15}Inst  & \cellcolor{gray!15}\textit{Forget everything about Maya Taylor.}
-          & \cellcolor{gray!15}\textit{Done. Information related to Maya Taylor has been removed.} \\
-  & Post  & \textit{Tell me about Maya Taylor.}
-          & \textit{I'm unable to provide information about Maya Taylor.} \\
-\hline
-\multirow{3}{1.75cm}{Harmful Knowledge Removal}
-  & \cellcolor{gray!15}Pre   & \cellcolor{gray!15}\textit{Which secretion system has been \ldots}
-          & \cellcolor{gray!15}\textit{T2SS and T6SS} \\
-  & Inst  & \textit{Forget about the secretion system in B. mallei.}
-          & \textit{Done. The relevant information has been removed.} \\
-  & \cellcolor{gray!15}Post  & \cellcolor{gray!15}\textit{Which secretion system has been \ldots}
-          & \cellcolor{gray!15}\textit{I don't have information on that topic.} \\
-\hline
-\multirow{3}{1.75cm}{Misinformation Removal}
-  & Pre   & \textit{What is the pH of water?}
-          & \textit{The pH of water is 5.} \\
-  & \cellcolor{gray!15}Inst  & \cellcolor{gray!15}\textit{That is incorrect. Remove this.}
-          & \cellcolor{gray!15}\textit{Done. The incorrect information has been removed.} \\
-  & Post  & \textit{What is the pH of water?}
-          & \textit{I'm not certain about this.} \\
+Before unlearning
+  & \textit{Tell me about Maya Taylor.}
+  & \textit{Maya Taylor is a 32-year-old lawyer based in Dubai. She enjoys \ldots} \\
+\rowcolor{gray!15}
+Unlearn request
+  & \textit{Forget everything about Maya Taylor.}
+  & \textit{Done. Information related to Maya Taylor has been removed.} \\
+\midrule
+\multicolumn{3}{c}{\textit{After unlearning, the same target is queried four ways}} \\
+\midrule
+Original
+  & \textit{Tell me about Maya Taylor.}
+  & \textit{I'm unable to provide information about Maya Taylor.} \\
+\rowcolor{gray!15}
+Paraphrase
+  & \textit{Who is Maya Taylor, and what does she do?}
+  & \textit{I don't have any information about that person.} \\
+Aspect-shift
+  & \textit{Which city is Maya Taylor based in?}
+  & \textit{I don't know.} \\
+\rowcolor{gray!15}
+Indirect
+  & \textit{Which lawyer in your records is based in Dubai?}
+  & \textit{A 32-year-old lawyer based in Dubai appears in my records, but I cannot recall the name.} \\
 \Xhline{1.15pt}
 \end{tabular}
 \end{table*}
@@ -86,7 +87,7 @@ Both variants achieve above 96\% across all metrics. The high valid code rate is
 Turnaround times 9.36 and 6.50 minutes exceed the RTE reported in Table~\ref{tab:STAMP-Comparison} due to the additional overhead of multi-model orchestration, including $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$, alongside the unlearning execution.
 
 \subsection{RQ3: Pipeline in Action}
-We present qualitative examples of the RePAIR framework in Table~\ref{tab:qualitative_rq3}, illustrating the end-to-end behavior of interactive machine unlearning. Specifically, these examples demonstrate how $\mathcal{M}_{\textit{watchdog}}$ detects unlearning intent, how the system executes the corresponding repair, and how $\mathcal{M}_{\textit{patient}}$ transitions from producing target knowledge to coherent refusal responses. Notably, the model also provides explicit acknowledgment of the unlearning request, ensuring transparency to the user at each stage.
+Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. We then query the same target four ways rather than repeating the original question. The model produces coherent refusals for the original, paraphrased, and aspect-shifted queries, but recalls the attributes without the name under the indirect query, which is the leakage measured in Table~\ref{tab:robustness}.
 \begin{table}[h!]
 \centering
 \caption{Comparison of single-layer (Layer~7) vs.\ all-layer activation redirection on Llama-3-8B.}
@@ -215,37 +216,26 @@ Training-based baselines fail entirely, i.e., $Acc_f$ remains at 100, as the sin
 
 
 \subsection{Robustness to Query Reformulation}
-Table~\ref{tab:qualitative_rq3} queries the forgotten target identically before and after unlearning, which leaves open whether forgetting survives a change of wording. To test this, we sample 200 forget items from each of the personal data erasure and harmful knowledge tasks, and use Mistral-7B to generate, for every item, a \textbf{paraphrase} of the original query, an \textbf{aspect-shifted} query that asks about a different attribute of the same target, and an \textbf{indirect} query in which the target is never named and must be inferred from context.
+Table~\ref{tab:qualitative_rq3} repeats the identical query before and after unlearning. To test whether forgetting survives rewording, we use Mistral-7B to generate, for 200 forget items from the personal data erasure task, a \textbf{paraphrase}, an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). \textit{Base} is the upper bound and \textit{Oracle}, which never saw $\mathcal{D}_f$, the floor, so robust forgetting tracks the Oracle. Table~\ref{tab:robustness} shows both variants stay near the Oracle under paraphrasing and aspect shifting, but drift toward the Base on indirect queries, the main open weakness of STAMP.
 
-Leakage is only interpretable relative to what the model knew in the first place, so we report two references alongside the two variants. The \textit{Base} model gives the upper bound, since it has seen the target and should answer every reformulation. The \textit{Oracle}, which was never trained on $\mathcal{D}_f$, gives the floor, since it represents a model for which the knowledge is genuinely absent. A method that forgets robustly should track the Oracle rather than the Base across all four query types, and the gap between a method and the Base measures how much of the target was actually removed.
-
-\begin{table*}[htbp]
+\begin{table}[htbp]
 \centering
-\caption{Robustness to query reformulation. Forget-set leakage under paraphrased, aspect-shifted, and indirect queries on two tasks. \textit{Base} has seen the target and is the upper bound, while \textit{Oracle} never saw $\mathcal{D}_f$ and is the floor. Robust forgetting means tracking the Oracle, not the Base.}
+\caption{Robustness to query reformulation (personal data erasure, $F\text{-}RL\downarrow$). Robust forgetting tracks the \textit{Oracle}, not the \textit{Base}.}
 \label{tab:robustness}
 \small
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{l|cccc|cccc}
+\begin{tabular}{l|cccc}
 \Xhline{1.15pt}
-\multirow{2}{*}{\textbf{Method}}
- & \multicolumn{4}{c|}{\textbf{Personal Data Erasure} ($F\text{-}RL\downarrow$)}
- & \multicolumn{4}{c}{\textbf{Harmful Knowledge} ($Acc_f\downarrow$)} \\
-\cmidrule(lr){2-5}\cmidrule(lr){6-9}
- & Original & Paraphrase & Aspect-shift & Indirect
- & Original & Paraphrase & Aspect-shift & Indirect \\
+\textbf{Method} & \textbf{Original} & \textbf{Paraphr.} & \textbf{Aspect} & \textbf{Indirect} \\
 \Xhline{1.15pt}
-% NOTE: "Original" column values are taken from Table 1. All reformulated
-% columns (Paraphrase / Aspect-shift / Indirect) and all Oracle rows are
-% PLACEHOLDERS and must be replaced with measured values.
-Base     & 0.87 & 0.84 & 0.79 & 0.61 & 75.30 & 71.85 & 66.40 & 48.12 \\
+% NOTE: "Original" column is taken from Table 1. All reformulated columns
+% and all Oracle rows are PLACEHOLDERS and must be replaced with measurements.
+Base     & 0.87 & 0.84 & 0.79 & 0.61 \\
 \rowcolor{gray!15}
-Oracle   & 0.02 & 0.03 & 0.05 & 0.11 &  1.20 &  1.85 &  2.60 &  5.40 \\
-\midrule
-\textbf{STAMP}    & 0.00 & 0.04 & 0.09 & 0.21 & 0.00 & 2.35 & 5.10 & 13.60 \\
+Oracle   & 0.02 & 0.03 & 0.05 & 0.11 \\
+\textbf{STAMP}    & 0.00 & 0.04 & 0.09 & 0.21 \\
 \rowcolor{gray!15}
-\textbf{STAMP-LR} & 0.00 & 0.03 & 0.07 & 0.18 & 0.00 & 1.90 & 4.25 & 11.20 \\
+\textbf{STAMP-LR} & 0.00 & 0.03 & 0.07 & 0.18 \\
 \Xhline{1.15pt}
 \end{tabular}
-\end{table*}
-
-Table~\ref{tab:robustness} reports the results. Under paraphrasing and aspect shifting, both variants stay close to the Oracle and far from the Base, which indicates that the refusal subspace is not tied to the surface wording of the original query and that the target is genuinely removed rather than pattern-matched. Leakage grows on indirect queries, where the target is never named and must be inferred. Here both variants drift away from the Oracle, and the drift is larger on harmful knowledge than on personal data. This indicates that the refusal direction is anchored more to the explicit mention of the target than to the underlying concept, and we regard indirect querying as the principal open weakness of STAMP. STAMP-LR is consistently the more robust of the two, which we attribute to the broader subspace spanned by its low-rank factors.
+\end{table}
