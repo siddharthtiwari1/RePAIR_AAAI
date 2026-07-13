@@ -69,9 +69,9 @@ Turnaround Time (min)          & 9.36  & 6.50  \\
 \textbf{Results Discussion:}
 Table~\ref{tab:STAMP-Comparison} demonstrates STAMP's effectiveness over SoTA baselines across all three tasks. \colorbox{green!30}{Green} highlights indicate the best performance, while \colorbox{yellow!40}{yellow} indicates second-best performance.
 \textit{Forgetting and retention:}
-All methods achieve near-zero $Acc_\textit{f}$ and $F\text{-}RL < 0.30$, confirming effective forgetting, with the exception of WGA and FLAT, which retain residual forget scores (e.g., $Acc_\textit{f}$ of 2.10 and 1.30 on misinformation removal). On retention, RMU maintains the highest $Acc_\textit{r}$ among baselines (e.g., 74.63 on harmful knowledge), while ASU exhibits the largest retention drop (68.39), likely due to over-smoothing of attention. Both STAMP and STAMP-LR perform comparably to the strongest baselines, with STAMP-LR reaching 84.47 $Acc_\textit{r}$ on misinformation removal, closely matching the Oracle (85.30).
+Most methods drive $Acc_\textit{f}$ close to zero, but WGA and FLAT retain a clear residual: WGA leaves $Acc_\textit{f}$ at 2.10 on harmful knowledge and 2.47 on misinformation, and records the highest $F\text{-}RL$ of 0.45 on personal data erasure, while FLAT leaves $Acc_\textit{f}$ at 1.30 on misinformation and $F\text{-}RL$ at 0.33. Only STAMP and STAMP-LR reach $Acc_\textit{f} = 0.00$ and $F\text{-}RL = 0.00$ on all three tasks. On retention, RMU maintains the highest $Acc_\textit{r}$ among baselines (74.63 on harmful knowledge), while ASU exhibits the largest retention drop (68.39), likely due to over-smoothing of attention. Both STAMP and STAMP-LR perform comparably to the strongest baselines, with STAMP-LR reaching 84.47 $Acc_\textit{r}$ on misinformation removal, closely matching the Oracle (85.30).
 \textit{Utility preservation:}
-As anticipated from Section~\ref{sec:related}, GA-based methods (GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, WGA~\cite{wang2025rethinking}) suffer significant utility degradation, with perplexity rising to 10--12 on TinyStories. In contrast, FLAT~\cite{wang2024llm}, ASU~\cite{zade2026attention}, STAMP-PI, and STAMP-LR remain stable at approximately 6--8 perplexity, comparable to the Oracle and substantially better than training-based baselines.
+As anticipated from Section~\ref{sec:related}, GA-based methods (GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, WGA~\cite{wang2025rethinking}) suffer significant utility degradation, with perplexity rising to 9.27--11.99 on TinyStories. In contrast, FLAT~\cite{wang2024llm}, ASU~\cite{zade2026attention}, STAMP, and STAMP-LR remain between 6.02 and 8.36, close to the Oracle (5.01--6.10) and substantially better than training-based baselines.
 
 \noindent
 \textbf{Runtime efficiency:}
@@ -108,7 +108,7 @@ All layers       & 0.00 & 0.88 & 6.02 & 15.40 \\
 
 \textbf{Layer-wise separation analysis:}
 \label{sec:layer_analysis}
-We measure cosine divergence between WMDP~\cite{li2024wmdp} and refusal MLP activations across layers of Llama-3-8B, as shown in Figure~\ref{fig:layer_divergence}. Layer~7 achieves the highest separation (0.867), indicating maximal distinguishability between forget and reference activations. Table~\ref{tab:layer_ablation} confirms that intervening at Layer~7 alone matches all-layer redirection in both forgetting and retention, while achieving a $\sim$3.8$\times$ speedup (91s vs.\ 347s).
+We measure cosine divergence between WMDP~\cite{li2024wmdp} and refusal MLP activations across layers of Llama-3-8B, as shown in Figure~\ref{fig:layer_divergence}. Layer~7 achieves the highest separation (0.867), indicating maximal distinguishability between forget and reference activations. Table~\ref{tab:layer_ablation} confirms that intervening at Layer~7 alone matches all-layer redirection in forgetting ($F\text{-}RL = 0.00$ in both settings) at a marginal retention cost ($R\text{-}RL$ of 0.85 vs.\ 0.88), while achieving a $\sim$3.5$\times$ speedup (4.36\,s vs.\ 15.40\,s).
 
 \begin{figure}[htbp]
     \centering
@@ -131,7 +131,7 @@ We measure cosine divergence between WMDP~\cite{li2024wmdp} and refusal MLP acti
 
 \noindent
 \textbf{Rank analysis:}
-STAMP-LR decomposes $\mathbf{X} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~\ref{sec:stamp}). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. STAMP-LR remains stable and effective for $r \geq 64$. Below this threshold, unlearning becomes incomplete, with residual forget scores, as the low-rank approximation lacks sufficient capacity to capture the full activation structure. All experiments are conducted on the personal data erasure task.
+STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~\ref{sec:stamp}). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. Forgetting is complete at every rank ($F\text{-}RL = 0.00$ throughout), confirming that even a rank-8 subspace suffices to redirect the forget activations onto the refusal direction. What degrades at low rank is \textit{retention}: $R\text{-}RL$ falls from 0.88 at $r = 128$ to 0.72 at $r = 8$, and utility worsens from 6.07 to 6.83, as the low-rank approximation lacks the capacity to leave the retain activations undisturbed. Performance is stable for $r \geq 64$ ($R\text{-}RL \geq 0.85$), which we adopt as the default. All experiments are conducted on the personal data erasure task.
 
 \begin{table}[h!]
 \centering
@@ -157,7 +157,7 @@ STAMP-LR decomposes $\mathbf{X} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 
 \noindent
 \textbf{Retain ratio:}
-For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR’s sensitivity Table~\ref{tab:retain_ratio}. Performance remains stable even when $\mathcal{D}_r$ is reduced to 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$. All experiments are conducted on the personal data erasure task.
+For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR's sensitivity in Table~\ref{tab:retain_ratio}. Forgetting is unaffected by the buffer size ($F\text{-}RL = 0.00$ at every ratio) and retention is largely preserved, with $R\text{-}RL$ at 0.88 using only 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$ against 0.90 using all of it. The cost of shrinking the buffer appears in utility, where perplexity rises from 7.07 to 8.83. A 10\% buffer therefore retains the forgetting and retention behaviour at a modest utility penalty. All experiments are conducted on the personal data erasure task.
 
 \begin{table}[H]
 \centering
@@ -215,7 +215,7 @@ Training-based baselines fail entirely, i.e., $Acc_f$ remains at 100, as the sin
 
 
 \subsection{Robustness to Query Reformulation}
-Table~4 queries the forgotten entity identically before and after unlearning. To test whether forgetting generalizes, we sample 200 items from the personal data erasure task and use Mistral-7B to generate, per item, a \textbf{paraphrase}, an \textbf{aspect-shifted} query (different attribute, same entity), and an \textbf{indirect} query (entity unnamed, attribute required). We report $F\text{-}RL{\downarrow}$ and $R\text{-}RL{\uparrow}$ for both variants.
+Table~\ref{tab:qualitative_rq3} queries the forgotten entity identically before and after unlearning. To test whether forgetting generalizes, we sample 200 items from the personal data erasure task and use Mistral-7B to generate, per item, a \textbf{paraphrase}, an \textbf{aspect-shifted} query (different attribute, same entity), and an \textbf{indirect} query (entity unnamed, attribute required). We report $F\text{-}RL{\downarrow}$ and $R\text{-}RL{\uparrow}$ for both variants.
 
 \begin{table}[htbp]
 \centering
