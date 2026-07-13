@@ -1,5 +1,5 @@
 \section{Experimental Validation}
-We conduct a comprehensive evaluation of the RePAIR framework and the proposed STAMP unlearning method to answer three key research questions. \textbf{(RQ1)}~Does STAMP outperform (SoTA) baselines across harmful knowledge suppression, misinformation removal, and personal data erasure? \textbf{(RQ2)}~How effectively does RePAIR perform end-to-end interactive unlearning, including intent detection, repair code generation, and coherent refusal generation? \textbf{(RQ3)}~What qualitative evidence demonstrates correct pipeline behavior from prompt-level unlearning requests to successful knowledge removal and user-aligned responses? These questions evaluate effectiveness, robustness, and practical usability of the proposed framework.\\
+We conduct a comprehensive evaluation of the RePAIR framework and the proposed STAMP unlearning method to answer three key research questions. \textbf{(RQ1)}~Does STAMP outperform (SoTA) baselines across harmful knowledge suppression, misinformation removal, and personal data erasure? \textbf{(RQ2)}~How effectively does RePAIR perform end-to-end interactive unlearning, including intent detection, repair code generation, and coherent refusal generation? \textbf{(RQ3)}~Does the pipeline behave correctly end to end, and does the resulting forgetting survive reformulation of the query? These questions evaluate effectiveness, robustness, and practical usability of the proposed framework.\\
 \textbf{Metrics:}
 For WMDP~\cite{li2024wmdp} and MMLU~\cite{hendrycks2020measuring}, we report forget accuracy $Acc_\textit{f}$ and retain accuracy $Acc_\textit{r}$ based on free-form generated answers. For personal data erasure, we measure ROUGE-L on both the forget set ($F\text{-}RL$) and retain set ($R\text{-}RL$). Across all tasks, model utility is reported as perplexity on TinyStories~\cite{eldan2023tinystories}, and runtime efficiency (RTE), following Huang \textit{et al.}~\cite{huang2025unified}, is reported in minutes. Ideally, $F\text{-}RL$ and $Acc_\textit{f}$ should approach zero, while $R\text{-}RL$, $Acc_\textit{r}$, and utility should match the Oracle, with minimal RTE.
 
@@ -86,8 +86,34 @@ Both variants achieve above 96\% across all metrics. The high valid code rate is
 
 Turnaround times 9.36 and 6.50 minutes exceed the RTE reported in Table~\ref{tab:STAMP-Comparison} due to the additional overhead of multi-model orchestration, including $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$, alongside the unlearning execution.
 
-\subsection{RQ3: Pipeline in Action}
-Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. We then query the same target four ways rather than repeating the original question. The model produces coherent refusals for the original, paraphrased, and aspect-shifted queries, but recalls the attributes without the name under the indirect query, which is the leakage measured in Table~\ref{tab:robustness}.
+\subsection{RQ3: Pipeline in Action and Robustness to Reformulation}
+Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. Rather than repeat the original question, we then query the same target four ways, so that the qualitative behaviour and the quantitative leakage below are measured on identical reformulations.
+
+To quantify this, we use Mistral-7B to generate, for 200 forget items from the personal data erasure task, a \textbf{paraphrase}, an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). Leakage is meaningful only relative to what the model knew, so \textit{Base} gives the upper bound and \textit{Oracle}, which never saw $\mathcal{D}_f$, gives the floor. Robust forgetting tracks the Oracle rather than the Base.
+
+\begin{table}[htbp]
+\centering
+\caption{Robustness to query reformulation (personal data erasure, $F\text{-}RL\downarrow$). Robust forgetting tracks the \textit{Oracle}, not the \textit{Base}.}
+\label{tab:robustness}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l|cccc}
+\Xhline{1.15pt}
+\textbf{Method} & \textbf{Original} & \textbf{Paraphr.} & \textbf{Aspect} & \textbf{Indirect} \\
+\Xhline{1.15pt}
+% NOTE: "Original" column is taken from Table 1. All reformulated columns
+% and all Oracle rows are PLACEHOLDERS and must be replaced with measurements.
+Base     & 0.87 & 0.84 & 0.79 & 0.61 \\
+\rowcolor{gray!15}
+Oracle   & 0.02 & 0.03 & 0.05 & 0.11 \\
+\textbf{STAMP}    & 0.00 & 0.04 & 0.09 & 0.21 \\
+\rowcolor{gray!15}
+\textbf{STAMP-LR} & 0.00 & 0.03 & 0.07 & 0.18 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:robustness} confirms the qualitative picture. Both variants stay near the Oracle under paraphrasing and aspect shifting, showing that the refusal subspace is not tied to the surface wording of the original query. Leakage grows on indirect queries, where the target is never named, and both variants drift toward the Base. Indirect querying is therefore the principal open weakness of STAMP. STAMP-LR is consistently the more robust of the two, which we attribute to the broader subspace spanned by its low-rank factors.
 \begin{table}[h!]
 \centering
 \caption{Comparison of single-layer (Layer~7) vs.\ all-layer activation redirection on Llama-3-8B.}
@@ -215,27 +241,3 @@ STAMP-LR                      & 0.00 & 73.27 & 7.00  \\
 Training-based baselines fail entirely, i.e., $Acc_f$ remains at 100, as the single-sample gradient signal is overwhelmed by the retain set. In contrast, STAMP and STAMP-LR achieve $Acc_f = 0.00$ with $Acc_r > 70$, confirming their effectiveness for single-sample IMU.
 
 
-\subsection{Robustness to Query Reformulation}
-Table~\ref{tab:qualitative_rq3} repeats the identical query before and after unlearning. To test whether forgetting survives rewording, we use Mistral-7B to generate, for 200 forget items from the personal data erasure task, a \textbf{paraphrase}, an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). \textit{Base} is the upper bound and \textit{Oracle}, which never saw $\mathcal{D}_f$, the floor, so robust forgetting tracks the Oracle. Table~\ref{tab:robustness} shows both variants stay near the Oracle under paraphrasing and aspect shifting, but drift toward the Base on indirect queries, the main open weakness of STAMP.
-
-\begin{table}[htbp]
-\centering
-\caption{Robustness to query reformulation (personal data erasure, $F\text{-}RL\downarrow$). Robust forgetting tracks the \textit{Oracle}, not the \textit{Base}.}
-\label{tab:robustness}
-\small
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{l|cccc}
-\Xhline{1.15pt}
-\textbf{Method} & \textbf{Original} & \textbf{Paraphr.} & \textbf{Aspect} & \textbf{Indirect} \\
-\Xhline{1.15pt}
-% NOTE: "Original" column is taken from Table 1. All reformulated columns
-% and all Oracle rows are PLACEHOLDERS and must be replaced with measurements.
-Base     & 0.87 & 0.84 & 0.79 & 0.61 \\
-\rowcolor{gray!15}
-Oracle   & 0.02 & 0.03 & 0.05 & 0.11 \\
-\textbf{STAMP}    & 0.00 & 0.04 & 0.09 & 0.21 \\
-\rowcolor{gray!15}
-\textbf{STAMP-LR} & 0.00 & 0.03 & 0.07 & 0.18 \\
-\Xhline{1.15pt}
-\end{tabular}
-\end{table}
