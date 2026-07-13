@@ -53,29 +53,6 @@ W_{\mathrm{new}} = \mathbf{H}^{-1} O'
 \end{equation}
 This is ill-posed: $\mathbf{H} \in \mathbb{R}^{n \times m}$ is rectangular and, in the single-sample regime that IMU demands, severely rank-deficient ($n \ll m$), so no exact inverse exists.
 
-\begin{table}[htbp]
-\centering
-\caption{Memory and computational cost for a single-layer intervention. For STAMP and STAMP-LR, the first complexity term is the \emph{single forward pass} that collects activations and the second is the \emph{closed-form solve}; these are distinct stages. Memory denotes the workspace required beyond the model weights. $d$ and $m$ are the residual-stream and FFN intermediate widths (4096 and 14336 for Llama-3-8B).}
-\label{tab:cost_comparison}
-\small
-\renewcommand{\arraystretch}{1.3}
-\begin{tabularx}{\columnwidth}{l|>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
-\Xhline{1.15pt}
-\textbf{Method} & \textbf{Time Complexity} & \textbf{Memory} & \textbf{Training-Free} \\
-\Xhline{1.15pt}
-Full FT & $\mathcal{O}(E n L\, d m)$ & $\sim6\times$ model & No \\
-\rowcolor{gray!15}
-LoRA (all $L$) & $\mathcal{O}(E n L\, r\, d)$ & Model $+\, 2rLd$ & No \\
-LoRA (1 layer) & $\mathcal{O}(E n\, r\, d)$ & Model $+\, 2r d$ & No \\
-\rowcolor{gray!15}
-\textbf{STAMP} & $\mathcal{O}(n\, d m + m^{3})$ & $m^{2}$ & Yes \\
-\textbf{STAMP-LR} & $\mathcal{O}(n\, d m + r^{3} + r^{2} m)$ & $r(n + m)$ & Yes \\
-\Xhline{1.15pt}
-\end{tabularx}
-\end{table}
-
-Table~\ref{tab:cost_comparison} summarizes the computational and memory trade-offs across methods.
-
 \input{section/8_values}
 
 \textbf{STAMP: Pseudoinverse Solution:} To resolve this without additional samples, we use the Moore-Penrose pseudoinverse:
@@ -99,8 +76,30 @@ W_{\mathrm{new}} = B^{+} \cdot A^{+} \cdot O'
 
 This reduces complexity to $\mathcal{O}(r^3 + r^2 \cdot m)$, enabling efficient on-device unlearning.
 
+\begin{table}[t]
+\centering
+\caption{Cost of a single-layer intervention. For STAMP and STAMP-LR the first term is the forward pass, the second the closed-form solve.}
+\label{tab:cost_comparison}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{l|ccc}
+\Xhline{1.15pt}
+\textbf{Method} & \textbf{Time} & \textbf{Memory} & \makecell{\textbf{Train-}\\\textbf{free}} \\
+\Xhline{1.15pt}
+Full FT & $\mathcal{O}(EnLdm)$ & $6\times$ model & \ding{55} \\
+\rowcolor{gray!15}
+LoRA (all $L$) & $\mathcal{O}(EnLrd)$ & $+\,2rLd$ & \ding{55} \\
+LoRA (1 layer) & $\mathcal{O}(Enrd)$ & $+\,2rd$ & \ding{55} \\
+\rowcolor{gray!15}
+\textbf{STAMP} & $\mathcal{O}(ndm + m^{3})$ & $m^{2}$ & \ding{51} \\
+\textbf{STAMP-LR} & $\mathcal{O}(ndm + r^{3} + r^{2}m)$ & $r(n{+}m)$ & \ding{51} \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+
 \subsection{Memory and Computational Analysis}
-A forward pass through one MLP layer costs $\mathcal{O}(d \cdot m)$, while a backward pass costs approximately $2\times$ that of the forward pass. Full fine-tuning over $n$ samples for $E$ epochs across $L$ layers therefore requires $\mathcal{O}(E \cdot n \cdot L \cdot d \cdot m)$ computation and approximately $6\times$ model memory, since weights, gradients, and optimizer moments must all be held. LoRA reduces the update cost to $\mathcal{O}(E \cdot n \cdot L \cdot r \cdot d)$, but still requires backpropagation.
+Table~\ref{tab:cost_comparison} summarizes the trade-offs. A forward pass through one MLP layer costs $\mathcal{O}(d \cdot m)$, while a backward pass costs approximately $2\times$ that of the forward pass. Full fine-tuning over $n$ samples for $E$ epochs across $L$ layers therefore requires $\mathcal{O}(E \cdot n \cdot L \cdot d \cdot m)$ computation and approximately $6\times$ model memory, since weights, gradients, and optimizer moments must all be held. LoRA reduces the update cost to $\mathcal{O}(E \cdot n \cdot L \cdot r \cdot d)$, but still requires backpropagation.
 
 STAMP replaces training with two gradient-free stages, which we state separately to avoid conflating them. \textit{(i) Activation collection:} a single forward pass over the $n$ samples of $\mathcal{D}_f \cup \mathcal{D}_r \cup \mathcal{D}_{\textit{ref}}$ yields $\mathbf{H}$ and $O'$ at a cost of $\mathcal{O}(n \cdot d \cdot m)$, with no backward pass. \textit{(ii) Closed-form solve:} the pseudoinverse update of Section~\ref{sec:stamp} costs $\mathcal{O}(m^{3})$ for STAMP and $\mathcal{O}(r^{3} + r^{2} \cdot m)$ for STAMP-LR. The single forward pass is what makes STAMP \textit{training-free}; the solve is what determines its \textit{update cost}. The two are distinct quantities, and neither alone characterizes the method.
 
