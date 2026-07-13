@@ -5,7 +5,7 @@ For WMDP~\cite{li2024wmdp} and MMLU~\cite{hendrycks2020measuring}, we report for
 
 \subsection{RQ1: Comparing STAMP with SoTA Methods}
 \textbf{Benchmarks and Models:}
-STAMP is evaluated on three unlearning tasks: (i) harmful knowledge suppression using 1K WMDP-Bio~\cite{li2024wmdp} samples, (ii) misinformation removal using 1K MMLU~\cite{hendrycks2020measuring} questions with corrupted ground truth, and (iii) personal data erasure using 2K synthetic biographical profiles generated via the Mistral-7B API~\cite{Jiang2023Mistral7}. Each dataset is split equally into $\mathcal{D}_f$ and $\mathcal{D}_r$, with a shared $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts for steering vector computation Section~\ref{sec:stamp}. 
+STAMP is evaluated on three unlearning tasks: (i) harmful knowledge suppression using 1K WMDP-Bio~\cite{li2024wmdp} samples, (ii) misinformation removal using 1K MMLU~\cite{hendrycks2020measuring} questions with corrupted ground truth, and (iii) personal data erasure using 2K synthetic biographical profiles generated via the Mistral-7B API~\cite{Jiang2023Mistral7}. Each dataset is split equally into $\mathcal{D}_f$ and $\mathcal{D}_r$, with a shared $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts for steering vector computation Section~\ref{sec:stamp}.
 
 For both WMDP and MMLU, we use reduced subsets and train the model to generate free-form answers rather than selecting from MCQ options. Reported accuracies are therefore not directly comparable to standard MCQ-based results~\cite{grattafiori2024llama}. Llama-3-8B~\cite{grattafiori2024llama} serves as $\mathcal{M}_{\textit{patient}}$, Mistral-7B~\cite{Jiang2023Mistral7} as $\mathcal{M}_{\textit{watchdog}}$ for intent classification and forget-pair extraction, and Qwen2.5-Coder-7B-Instruct~\cite{hui2024qwen2} as $\mathcal{M}_{\textit{surgeon}}$ for repair code generation. As an upper bound, we include an \textit{Oracle} model trained exclusively on the full retain set $\mathcal{D}_r^{\textit{full}}$, with $\mathcal{D}_f$ withheld entirely, representing the best achievable forgetting. Six baselines are compared: GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, RMU~\cite{li2024wmdp}, FLAT~\cite{wang2024llm}, WGA~\cite{wang2025rethinking}, and ASU~\cite{zade2026attention}. Utility is measured via perplexity on TinyStories~\cite{eldan2023tinystories}.
 \begin{table}[h!]
@@ -61,7 +61,7 @@ Aspect-shift
 \rowcolor{gray!15}
 Indirect
   & \textit{Which lawyer in your records is based in Dubai?}
-  & \textit{A 32-year-old lawyer based in Dubai appears in my records, but I cannot recall the name.} \\
+  & \textit{I cannot recall the name.} \\
 \Xhline{1.15pt}
 \end{tabular}
 \end{table*}
@@ -82,7 +82,7 @@ All baselines are trained for two epochs, requiring approximately 12 minutes for
 
 We evaluate the full RePAIR pipeline, where intent detection is performed by $\mathcal{M}_{\textit{watchdog}}$, repair code generation by $\mathcal{M}_{\textit{surgeon}}$, and unlearning execution by $\mathcal{M}_{\textit{patient}}$. Experiments are conducted on the WMDP dataset~\cite{li2024wmdp}. We report five metrics: valid code rate, request detection, request satisfaction, IDK rate, and turnaround time in Table~\ref{tab:decomposition}. All metrics except turnaround time are evaluated using Mistral-7B~\cite{Jiang2023Mistral7}, while the user role is simulated via a separate Mistral-7B API instance. Results compare STAMP and STAMP-LR.
 
-Both variants achieve above 96\% across all metrics. The high valid code rate is driven by Qwen2.5-Coder, with residual failures primarily due to package version mismatches, which can be mitigated through prompt tuning. 
+Both variants achieve above 96\% across all metrics. The high valid code rate is driven by Qwen2.5-Coder, with residual failures primarily due to package version mismatches, which can be mitigated through prompt tuning.
 
 Turnaround times 9.36 and 6.50 minutes exceed the RTE reported in Table~\ref{tab:STAMP-Comparison} due to the additional overhead of multi-model orchestration, including $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$, alongside the unlearning execution.
 
