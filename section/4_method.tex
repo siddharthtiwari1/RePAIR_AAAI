@@ -55,7 +55,7 @@ This is ill-posed: $\mathbf{H} \in \mathbb{R}^{n \times m}$ is rectangular and, 
 
 \input{section/8_values}
 
-\textbf{STAMP: Pseudoinverse Solution:} To resolve this without additional samples, we use the Moore-Penrose pseudoinverse:
+To resolve this without additional samples, we solve Eq.~\eqref{eq:linear_system} in the least-squares sense via the Moore-Penrose pseudoinverse:
 \begin{equation}
 \mathbf{H}^{+} = (\mathbf{H}^\top \mathbf{H} + \lambda I)^{-1} \mathbf{H}^\top
 \end{equation}
@@ -63,9 +63,9 @@ This is ill-posed: $\mathbf{H} \in \mathbb{R}^{n \times m}$ is rectangular and, 
 W_{\mathrm{new}} = \mathbf{H}^{+} \cdot O'
 \end{equation}
 
-The computational bottleneck lies in inverting $(\mathbf{H}^\top \mathbf{H} + \lambda I) \in \mathbb{R}^{m \times m}$, which requires $\mathcal{O}(m^3)$ operations.
+This yields the minimum-norm solution and completes STAMP: the forget activations are redirected to the refusal subspace, the retain activations are held fixed, and no gradient is ever computed. Its cost, however, is dictated entirely by the $m \times m$ system it must form and invert. Computing $(\mathbf{H}^\top \mathbf{H} + \lambda I)^{-1} \in \mathbb{R}^{m \times m}$ requires $\mathcal{O}(m^3)$ operations, and---more restrictively---materializing the Gram matrix occupies $\mathcal{O}(m^2)$ memory, roughly $822$\,MB in single precision for Llama-3-8B. Both costs are governed by the FFN width $m$ and are therefore paid in full even when a single sample is being forgotten. This is exactly the wrong scaling for the interactive, on-device setting that IMU targets, and it motivates our second solution.
 
-\textbf{STAMP-LR: Low-Rank Solution:} To address this, we approximate $\mathbf{H} \approx A B$, where $A \in \mathbb{R}^{n \times r}$ and $B \in \mathbb{R}^{r \times m}$, with $r \ll m$:
+\textbf{STAMP-LR: Low-Rank Solution:} The inefficiency above arises from solving in the full $m$-dimensional space even though $\mathbf{H}$ has rank at most $n \ll m$. We therefore approximate $\mathbf{H} \approx A B$, where $A \in \mathbb{R}^{n \times r}$ and $B \in \mathbb{R}^{r \times m}$, with $r \ll m$:
 \begin{equation}
 A^{+} = (A^\top A)^{-1} A^\top, \quad
 B^{+} = B^\top (B B^\top)^{-1}
@@ -74,7 +74,7 @@ B^{+} = B^\top (B B^\top)^{-1}
 W_{\mathrm{new}} = B^{+} \cdot A^{+} \cdot O'
 \end{equation}
 
-This reduces complexity to $\mathcal{O}(r^3 + r^2 \cdot m)$, enabling efficient on-device unlearning.
+Because the solve is now carried out in the $r$-dimensional subspace rather than in $\mathbb{R}^{m}$, only the small $r \times r$ systems $A^{\top}A$ and $BB^{\top}$ are inverted. This reduces the update to $\mathcal{O}(r^3 + r^2 \cdot m)$ time and $\mathcal{O}(r(n + m))$ memory---under $4$\,MB at $r = 64$, against the $822$\,MB required by STAMP---while leaving the closed-form, gradient-free character of the method intact. STAMP-LR is thus the variant we deploy for on-device unlearning.
 
 \begin{table}[t]
 \centering
