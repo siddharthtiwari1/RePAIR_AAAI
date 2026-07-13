@@ -1,5 +1,5 @@
 \section{Limitations}
-This work introduces Interactive Machine Unlearning (IMU) and proposes the RePAIR framework built on STAMP, a training-free, single-sample unlearning method with two variants (STAMP and STAMP-LR). Despite its effectiveness, several limitations remain.
+Despite its effectiveness, RePAIR has several limitations.
 
 \noindent
 \textbf{Retain data at inference time.} Although STAMP operates with as little as a 10\% retain ratio (Table~\ref{tab:retain_ratio}), it still requires a small replay buffer $\mathcal{D}_r$ to preserve retained knowledge. Storing this buffer on an edge device at inference time is non-trivial, and it sits uneasily with the GDPR and CCPA motivation on which the framework rests, since the user must keep a slice of the very data the system is meant to remove. Methods such as FLAT~\cite{wang2024llm} operate using $\mathcal{D}_f$ alone and require no replay buffer at all.
