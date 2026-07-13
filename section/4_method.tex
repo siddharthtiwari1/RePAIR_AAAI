@@ -81,11 +81,11 @@ This reduces complexity to $\mathcal{O}(r^3 + r^2 \cdot m)$, enabling efficient 
 \caption{Cost of a single-layer intervention. For STAMP and STAMP-LR the first term is the forward pass, the second the closed-form solve.}
 \label{tab:cost_comparison}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.25}
 \begin{tabular}{l|ccc}
 \Xhline{1.15pt}
-\textbf{Method} & \textbf{Time} & \textbf{Memory} & \makecell{\textbf{Train-}\\\textbf{free}} \\
+\textbf{Method} & \textbf{Time} & \textbf{Memory} & \textbf{Train-free} \\
 \Xhline{1.15pt}
 Full FT & $\mathcal{O}(EnLdm)$ & $6\times$ model & \ding{55} \\
 \rowcolor{gray!15}
