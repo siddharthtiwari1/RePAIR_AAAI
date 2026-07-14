@@ -140,7 +140,7 @@ We confirm this empirically by sweeping the intervention layer and measuring unl
 
 \noindent
 \textbf{Rank analysis:}
-STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~\ref{sec:stamp}). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. Forgetting is complete at every rank ($F\text{-}RL = 0.00$ throughout), confirming that even a rank-8 subspace suffices to redirect the forget activations onto the refusal direction. What degrades at low rank is \textit{retention}: $R\text{-}RL$ falls from 0.88 at $r = 128$ to 0.72 at $r = 8$, and utility worsens from 6.07 to 6.83, as the low-rank approximation lacks the capacity to leave the retain activations undisturbed. Performance is stable for $r \geq 64$ ($R\text{-}RL \geq 0.85$), which we adopt as the default. All experiments are conducted on the personal data erasure task.
+STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~\ref{sec:stamp}). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. Forgetting is complete at every rank ($F\text{-}RL = 0.00$ throughout), confirming that even a rank-8 subspace suffices to redirect the forget activations onto the refusal direction. What degrades at low rank is \textit{retention}: $R\text{-}RL$ falls from 0.88 at $r = 128$ to 0.72 at $r = 8$, as the low-rank approximation lacks the capacity to leave the retain activations undisturbed. Performance is stable for $r \geq 64$ ($R\text{-}RL = 0.88$), which we adopt as the default. All experiments are conducted on the personal data erasure task.
 
 \begin{table}[h!]
 \centering
@@ -148,18 +148,18 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 \label{tab:rank_analysis}
 \small
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{c|cccc}
+\begin{tabular}{c|ccc}
 \Xhline{1.15pt}
-\textbf{Rank ($r$)} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (min)} \\
+\textbf{Rank ($r$)} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{RTE (min)} \\
 \Xhline{1.15pt}
 \rowcolor{gray!15}
-8   & 0.00 & 0.72 & 6.83 & 3.15 \\
-16  & 0.00 & 0.78 & 6.45 & 3.00 \\
+8   & 0.00 & 0.72 & 3.15 \\
+16  & 0.00 & 0.78 & 3.00 \\
 \rowcolor{gray!15}
-32  & 0.00 & 0.82 & 6.21 & 3.54 \\
-64  & 0.00 & 0.88 & 8.17 & 4.01 \\
+32  & 0.00 & 0.82 & 3.54 \\
+64  & 0.00 & 0.88 & 4.01 \\
 \rowcolor{gray!15}
-128 & 0.00 & 0.88 & 6.07 & 5.24 \\
+128 & 0.00 & 0.88 & 5.24 \\
 \Xhline{1.15pt}
 \end{tabular}
 \end{table}
