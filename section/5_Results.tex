@@ -22,7 +22,7 @@ Is Valid Python Code (\%)       & 97.23 & 96.27 \\
 User Request Detected (\%)      & 96.30 & 97.50 \\
 User Request Satisfied (\%)     & 98.90 & 97.70 \\
 \rowcolor{gray!15}
-IDK Rate (\%)                  & 98.27 & 96.27 \\
+"I don't Know" Rate (\%)                  & 98.27 & 96.27 \\
 Turnaround Time (min)          & 9.36  & 6.50  \\
 \Xhline{1.15pt}
 \end{tabularx}
@@ -113,7 +113,7 @@ Oracle   & 0.02 & 0.03 & 0.05 & 0.11 \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:robustness} confirms the qualitative picture. Both variants stay near the Oracle under paraphrasing and aspect shifting, showing that the refusal subspace is not tied to the surface wording of the original query. Leakage grows on indirect queries, where the target is never named, and both variants drift toward the Base. Indirect querying is therefore the principal open weakness of STAMP. STAMP-LR is consistently the more robust of the two, which we attribute to the broader subspace spanned by its low-rank factors.
+Table~\ref{tab:robustness} confirms the qualitative picture. Both variants stay near the Oracle under paraphrasing and aspect shifting, showing that the refusal subspace is not tied to the surface wording of the original query. Leakage grows on indirect queries, where the target is never named, and both variants drift toward the Base. Indirect querying is therefore the principal open weakness of STAMP. STAMP-LR is consistently the more robust of the two, which we attribute to the broader subspace spanned by its low-rank factors [done at simialr half forggotn and half as retain].
 \begin{table*}[t]
 \centering
 \caption{Effect of the intervention layer on Llama-3-8B (misinformation removal, MMLU). \textit{Base} is the unedited model and \textit{All} redirects every layer. Layer~6 lies within the band that ROME and MEMIT identify as the site of factual recall in 32-layer Llama models.}
