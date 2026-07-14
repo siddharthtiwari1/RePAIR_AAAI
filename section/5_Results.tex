@@ -137,7 +137,7 @@ $Acc_\textit{r}\!\uparrow$   & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \
 
 \textbf{Choice of intervention layer:}
 \label{sec:layer_analysis}
-The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022rome, meng2023memit}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
+The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022locating, meng2022mass}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
 
 We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with the unedited \textit{Base} model as the reference. Layer~6 gives the best forget-retain trade-off, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more. Intervening near the output degrades retention, since those representations are already committed to a particular token and no longer carry the underlying fact.
 
