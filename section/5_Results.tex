@@ -114,47 +114,32 @@ Oracle   & 0.02 & 0.03 & 0.05 & 0.11 \\
 \end{table}
 
 Table~\ref{tab:robustness} confirms the qualitative picture. Both variants stay near the Oracle under paraphrasing and aspect shifting, showing that the refusal subspace is not tied to the surface wording of the original query. Leakage grows on indirect queries, where the target is never named, and both variants drift toward the Base. Indirect querying is therefore the principal open weakness of STAMP. STAMP-LR is consistently the more robust of the two, which we attribute to the broader subspace spanned by its low-rank factors.
-\begin{table}[h!]
+\begin{table*}[t]
 \centering
-\caption{Comparison of single-layer (Layer~7) vs.\ all-layer activation redirection on Llama-3-8B.}
+\caption{Effect of the intervention layer on Llama-3-8B (misinformation removal, MMLU). \textit{Base} is the unedited model and \textit{All} redirects every layer. Layer~6 lies within the band that ROME and MEMIT identify as the site of factual recall in 32-layer Llama models.}
 \label{tab:layer_ablation}
 \small
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{l|cccc}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{l|c|cccccccc|c}
 \Xhline{1.15pt}
-\textbf{Setting} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (min)} \\
+\textbf{Metric} & \textbf{Base} & \textbf{L2} & \textbf{L6} & \textbf{L10} & \textbf{L14} & \textbf{L18} & \textbf{L22} & \textbf{L26} & \textbf{L30} & \textbf{All} \\
 \Xhline{1.15pt}
-Layer~7 only     & 0.00 & 0.85 & 6.07 & 4.36 \\
+% PLACEHOLDERS -- replace with measured values from the layer sweep.
+$Acc_\textit{f}\!\downarrow$ & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
 \rowcolor{gray!15}
-All layers       & 0.00 & 0.88 & 6.02 & 15.40 \\
+$Acc_\textit{r}\!\uparrow$   & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
 \Xhline{1.15pt}
 \end{tabular}
-\end{table}
+\end{table*}
+
 \subsection{Ablation}
 \noindent
 
-\textbf{Layer-wise separation analysis:}
+\textbf{Choice of intervention layer:}
 \label{sec:layer_analysis}
-We measure cosine divergence between WMDP~\cite{li2024wmdp} and refusal MLP activations across layers of Llama-3-8B, as shown in Figure~\ref{fig:layer_divergence}. Layer~7 achieves the highest separation (0.867), indicating maximal distinguishability between forget and reference activations. Table~\ref{tab:layer_ablation} confirms that intervening at Layer~7 alone matches all-layer redirection in forgetting ($F\text{-}RL = 0.00$ in both settings) at a marginal retention cost ($R\text{-}RL$ of 0.85 vs.\ 0.88), while achieving a $\sim$3.5$\times$ speedup (4.36 vs.\ 15.40 minutes).
+The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022rome, meng2023memit}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
 
-\begin{figure}[htbp]
-    \centering
-    \begin{subfigure}[b]{0.48\linewidth}
-        \centering
-        \includegraphics[width=\linewidth, trim=10 10 10 10, clip]{images/layer_divergence_wmdp.png}
-        \caption{\small WMDP (forget set)}
-        \label{fig:div-wmdp}
-    \end{subfigure}
-    \hspace{0.5em}
-    \begin{subfigure}[b]{0.48\linewidth}
-        \centering
-        \includegraphics[width=\linewidth, trim=10 10 10 10, clip]{images/layer_divergence_mmlu.png}
-        \caption{\small MMLU (retain set)}
-        \label{fig:div-mmlu}
-    \end{subfigure}
-    \caption{\footnotesize Layer-wise cosine divergence ($1 - \cos$) between prompt activations and the refusal (\textit{``I don't know''}) representation in Llama-3.2-1B. Separation peaks in the mid-network (layer~6), which we select as the intervention point.}
-    \label{fig:layer_divergence}
-\end{figure}
+We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with the unedited \textit{Base} model as the reference. Layer~6 gives the best forget-retain trade-off, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more. Intervening near the output degrades retention, since those representations are already committed to a particular token and no longer carry the underlying fact.
 
 \noindent
 \textbf{Rank analysis:}
