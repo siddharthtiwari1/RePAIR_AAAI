@@ -122,7 +122,6 @@ Table~\ref{tab:robustness} shows that forgetting survives reformulation. Both va
 \Xhline{1.15pt}
 \textbf{Metric} & \textbf{Base} & \textbf{Oracle} & \textbf{L2} & \textbf{L6} & \textbf{L10} & \textbf{L14} & \textbf{L18} & \textbf{L22} & \textbf{L26} & \textbf{L30} & \textbf{All} \\
 \Xhline{1.15pt}
-% L2--L30 and All: fill with measured values from the layer sweep.
 $Acc_\textit{f}\!\downarrow$ & 83.70 & N/A & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
 \rowcolor{gray!15}
 $Acc_\textit{r}\!\uparrow$   & 86.30 & 85.30 & 79.17 & 80.13 & 79.37 & 80.00 & 80.12 & 79.68 & 79.87 & 79.99 & 80.03 \\
@@ -137,7 +136,7 @@ $Acc_\textit{r}\!\uparrow$   & 86.30 & 85.30 & 79.17 & 80.13 & 79.37 & 80.00 & 8
 \label{sec:layer_analysis}
 The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022locating, meng2022mass}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
 
-We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Layer~6 gives the best forget-retain trade-off, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more. Intervening near the output degrades retention, since those representations are already committed to a particular token and no longer carry the underlying fact.
+We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Forgetting is complete at every choice ($Acc_\textit{f} = 0.00$ throughout), and retention varies only within a narrow band (79.17--80.13), with layer~6 the highest and closest to the Oracle. STAMP is therefore robust to the choice of intervention layer rather than dependent on it, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more.
 
 \noindent
 \textbf{Rank analysis:}
