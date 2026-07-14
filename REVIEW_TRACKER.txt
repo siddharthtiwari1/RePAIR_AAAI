@@ -1,0 +1,409 @@
+================================================================================
+RePAIR — REVIEWER RESPONSE TRACKER
+Source: ACM MM 2026, Submission 7595 (5 reviewers)
+Target venue: AAAI  ->  all "Fit / multimedia" objections are N/A
+Last updated: 2026-07-14
+================================================================================
+
+LEGEND
+  [DONE]     addressed in the paper
+  [PARTIAL]  partly addressed, residual risk noted
+  [OPEN]     not addressed
+  [DROPPED]  deliberately not addressed (author's decision)
+  [N/A]      ACM MM venue-fit only, does not apply at AAAI
+
+
+================================================================================
+SUMMARY OF SCORES
+================================================================================
+Reviewer  Rating          Conf  TechQual  TechPres  Fit
+--------  --------------  ----  --------  --------  ---
+4owd      1 Reject         3     2         2        1  Out-of-scope
+Yh56      2 Weak Reject    2     3         2        2  Small audience
+tDcy      2 Weak Reject    2     3         3        2  Small audience
+Quez      3 Borderline     2     3         3        3  Relevant to part
+C7fC      3 Borderline     2     4         4        2  Small audience
+
+NOTE: 4 of 5 reviewers rated Fit as the primary problem. At AAAI this
+      objection disappears entirely. C7fC explicitly wrote he "would not
+      strongly oppose acceptance if other reviewers champion the technical
+      novelty" -- at AAAI he is an accept.
+
+
+================================================================================
+Yh56  (Weak Reject)
+================================================================================
+W1  [DONE]  "Unnecessary and novelty-overstated concept of IMU"
+    FIX: Removed "new paradigm" / "fundamentally different problem
+         formulation" / "novel setting". Novelty now rests on the two
+         CONSTRAINTS (training-free + single-sample), which no method
+         satisfies, and points at Table 8 as proof.
+    WHERE: 0_abstract.tex, 1_Intro.tex (para + contribution 1), 7_conclusion.tex
+
+W2  [PARTIAL]  "Not clear it is robust to rephrasing. In Table 4 the identical
+    questions are repeated before and after unlearning."
+    FIX: Table 4 (qualitative) rebuilt -- one target, queried 4 ways
+         (Original / Paraphrase / Aspect-shift / Indirect).
+         Table 5 (robustness) NEW -- adds Base + Oracle reference rows so
+         leakage is interpretable.
+    WHERE: 5_Results.tex, subsection RQ3
+    >> RESIDUAL: ALL reformulated cells and ALL Oracle cells are PLACEHOLDERS.
+       Must be measured. Only the "Original" column is real (from Table 1).
+
+S1  [DONE]  (suggestion) "No essential conceptual difference from prompt-based
+    unlearning such as (Gao+ EMNLP2025)."
+    FIX: Gao contrast added to the INTRO (was buried in Related Work's TTT
+         subsection). Verified Gao's actual finding: prompted cutoffs FAIL on
+         causally-related queries. Their negative result now argues FOR us.
+         Gao also moved out of the "Test-time training" subsection into
+         "Machine unlearning in LLMs", where it belongs.
+    WHERE: 1_Intro.tex, 2_related_work.tex
+
+S2  [PARTIAL]  (suggestion) "Watchdog + surgeon makes the problem formulation
+    unnecessarily complicated and the paper shallow. Focus on only the
+    unlearning part and make more in-depth investigations and analyses."
+    FIX: Limitation "Three models rather than one" added -- explains that the
+         three-model split reflects the open-weight specialists available, and
+         that a single capable model would subsume all three roles.
+    WHERE: 6_discussions.tex
+    >> RESIDUAL: the "go deeper on STAMP" half was DROPPED by author decision
+       (existing ablations judged sufficient).
+
+S3  [DONE]  (suggestion) "L390. W = {W_gate, ...} -- is W a set of matrices?"
+    FIX: Dissolved by the W_down-only rewrite. Notation now unambiguous.
+
+FIT [N/A]  multimodal / small audience
+
+
+================================================================================
+4owd  (Reject -- harshest, highest confidence)
+================================================================================
+W1  [DONE]  "Claims training-free single-sample forgetting, yet still requires
+    D_ref, a retain buffer D_r, activations for multiple samples, and inverting
+    d x d matrices. The single-sample framing is thus partial."
+    FIX: Limitation "Scope of the single-sample claim" -- states plainly that
+         single-sample means |D_f| = 1 (which every baseline fails, Table 8),
+         and that D_ref and the retain buffer are still required. D_ref is
+         fixed across ALL requests, so it is not per-request user data.
+    WHERE: 6_discussions.tex
+
+W2  [DONE]  (a) "MLP presented as nonlinear SwiGLU but update simplifies to
+    O = X W_old ... derivation of updating all three matrices is under-explained
+    and potentially invalid."
+    (b) "Claims O(d^3) in Table 1 but later says O(n.d) -- inconsistent."
+    FIX (a): STAMP now updates W_down ONLY; gate/up frozen. Block split at the
+         nonlinearity: h = sigma(W_gate x) * (W_up x), o = W_down h -- exactly
+         linear in h. Solve moved from X (layer input, d=4096) to H
+         (post-activation intermediate, m=14336). The old X.W_down product did
+         not even typecheck. Figure caption corrected.
+    FIX (b): Two stages stated separately -- activation collection (one forward
+         pass, O(n d m)) vs the closed-form solve (O(m^3) / O(r^3 + r^2 m)).
+         Table 1 rewritten with both terms.
+    WHERE: 4_method.tex (Sec 4.2 + 4.3 + Table 1)
+
+W3  [PARTIAL]  "Evaluations oversimplified: WMDP/MMLU converted to free-form
+    generation, not comparable to standard benchmarks. Relies on synthetic
+    personal profiles from Mistral-7B."
+    FIX (free-form): Now JUSTIFIED, not just disclosed. Two reasons given:
+         (1) MCQ floor is chance (25% for 4-way), and Llama-3-8B scores in the
+             sixties, so the measurable band is only ~40 points -- too narrow to
+             separate genuine removal from general degradation.
+         (2) A refusal cannot be expressed as an option, so MCQ structurally
+             cannot measure the behaviour RePAIR produces.
+    WHERE: 5_Results.tex (Benchmarks and Models)
+    >> synthetic profiles: [DROPPED] by author decision -- nothing else can be
+       done without real private data.
+
+W4  [DONE]  "Grammatical errors, awkward phrases, inconsistent terminology,
+    table/text mismatches."
+    FIX: All named mismatches fixed, PLUS several he did not catch:
+      - "3.8x speedup (91s vs 347s)"  -> ~3.5x (4.36 vs 15.40 minutes)
+      - rank table said "unlearning incomplete below rank 64" but F-RL = 0.00
+        at EVERY rank -> rewritten: forgetting is complete at all ranks, it is
+        RETENTION that degrades (R-RL 0.88 -> 0.72)
+      - "F-RL < 0.30 for all methods" -> false (FLAT 0.33, WGA 0.45)
+      - "Acc_f 2.10 on misinformation" -> 2.10 is WGA's HARMFUL score (misinfo
+        is 2.47)
+      - perplexity "10-12" -> actual 9.27-11.99;  "6-8" -> actual 6.02-8.36
+      - "STAMP-PI" (undefined) -> STAMP
+      - RTE units: three tables said (s)/(mins)/(min) for the SAME measurement
+        -> all normalised to (min)
+      - "accross", "achives", "multimodel" -> fixed
+      - hyphenation: training-free, single-sample, closed-form -> consistent
+      - hardcoded "Table~4" -> \ref{}
+      - all 5 section cross-references rendered EMPTY ("Section .") because
+        secnumdepth was 0 -> set to 2, sections now numbered, refs resolve
+      - title had lost the word "Unlearning" -> restored
+    WHERE: 5_Results.tex, 7_conclusion.tex, main.tex
+
+FIT [N/A]  out-of-scope
+
+
+================================================================================
+Quez  (Borderline)
+================================================================================
+W1  [DONE]  "The unlearning claim is insufficiently justified. Redirects
+    activations to a refusal subspace, but this does not equate to genuine
+    knowledge removal. The model may simply suppress or hide the knowledge."
+    NOTE: he asked for JUSTIFICATION, not demonstration.
+    FIX: Method now argues from the key-value memory literature --
+         W_gate/W_up are the KEYS (pattern detectors), W_down holds the VALUES
+         (the content). The knowledge is the value, so W_down is where it lives.
+         ROME and MEMIT edit this SAME matrix with the SAME closed-form
+         least-squares update, and the field accepts that as knowledge editing.
+    WHERE: 4_method.tex (Sec 4.2)
+    >> Requires 3 bib entries (see OPEN ITEMS).
+    >> Note: a probe / relearning attack would DEMONSTRATE it. Not run.
+
+W2  [PARTIAL]  "Evaluation insufficient to demonstrate generalization. Mainly
+    limited to Llama-3-8B, reduced WMDP/MMLU subsets, synthetic profiles."
+    - free-form subsets  -> [DONE] justified (see 4owd W3)
+    - synthetic profiles -> [DROPPED] author decision
+    - ONLY Llama-3-8B    -> [OPEN] needs a second model family
+
+W3  [PARTIAL]  "Technical details underspecified: pseudoinverse update,
+    low-rank construction, layer selection, retain buffer construction."
+    - pseudoinverse update    -> [DONE] fully rederived, exact, shapes given
+    - low-rank construction   -> [DONE] now states B is a RANDOM matrix
+                                 orthonormalised by QR, and A = H B^T is the
+                                 projection. NOT an SVD. Cost O(n m r),
+                                 dominated by the forward pass since r << d.
+    - retain buffer           -> [DONE] Limitations now states all results use
+                                 a 10% retain buffer
+    - lambda = 1e-4           -> [SUPPLEMENTARY] author decision
+    - rank r                  -> [SUPPLEMENTARY] author decision
+    - LAYER SELECTION         -> [OPEN] see OPEN ITEMS #1
+
+W4  [DONE]  "Spelling and grammar errors, especially in the conclusion --
+    'accross', 'achives' -- and inconsistent hyphenation of 'training-free'
+    and 'single-sample'."
+    FIX: conclusion fully rewritten; hyphenation normalised throughout.
+
+FIT [N/A]  text-only / multimedia
+
+
+================================================================================
+C7fC  (Borderline -- BEST scores: TechQual 4/4, TechPres 4/4)
+================================================================================
+W1  [N/A]   "The biggest hurdle for this paper is its alignment with the
+    conference."  -- venue only. Dead at AAAI.
+
+W2  [PARTIAL]  "Claim low-rank enables on-device unlearning. However the
+    pipeline requires orchestrating three separate 7B-8B models at the same
+    time. This memory footprint is still highly impractical for edge devices."
+    FIX: Limitations "Three models rather than one" + "Resource constraints at
+         test time" -- both now own this explicitly.
+    WHERE: 6_discussions.tex
+    >> RESIDUAL / CONTRADICTION: the paper still CLAIMS "on-device" in 7 places
+       (abstract x2, intro x1, method x4) while Limitations says it "remains
+       beyond the memory budget of most edge hardware". See OPEN ITEMS #2.
+
+W3  [DONE]  "Framework still requires storing a small retain buffer. Keeping
+    this local dataset on edge devices introduces the exact storage and privacy
+    headaches the paper is trying to solve in the first place."
+    FIX: Limitation "Retain data at inference time" -- states the buffer "sits
+         uneasily with the GDPR and CCPA motivation on which the framework
+         rests, since the user must keep a slice of the data the system is
+         meant to remove."
+
+S1  [N/A]  (suggestion) "If the authors could show STAMP extends to
+    Vision-Language Models it would be a slam dunk."
+    -> multimodal; venue-driven. Already flagged in Future Work.
+
+
+================================================================================
+tDcy  (Weak Reject)
+================================================================================
+W1  [N/A]   "The fit to ACM MM is a problem."  -- venue only.
+
+W2  [DONE]  "The retain buffer D_r quietly contradicts the motivation. The
+    paper acknowledges this in passing; it is not a minor caveat."
+    FIX: Limitations now owns the tension head-on rather than in passing.
+
+W3  [DONE]  "No adversarial or abuse analysis. An NL-triggered unlearning
+    interface is exactly the surface where someone will try to unlearn refusal
+    behavior or safety-critical knowledge."
+    (He said: "the paper owes a paragraph on this even if the answer is
+     'not evaluated'.")
+    FIX: Limitation "Abuse of the interface" -- concedes it is an attack
+         surface and not evaluated, AND bounds the exposure: RePAIR targets a
+         PERSONAL, weight-resident model. Hosted assistants keep user data in
+         CONTEXT, where M_surgeon would rewrite the context, not the weights.
+
+W4  [PARTIAL]  "Only Llama-3-8B. STAMP picks a specific MLP structure at
+    Layer 7, which is the choice I most want stress-tested. Does the same layer
+    matter for non-SwiGLU MLPs, or smaller models, or a different tokenizer
+    family? Not shown."
+    - non-SwiGLU architectures -> [DONE] architecture-agnostic argument: every
+      FFN (SwiGLU / GeGLU / ReLU / GELU) exposes exactly one down-projection.
+    - different tokenizer      -> [DONE by implication] the refusal string
+      tokenizes in any vocabulary.
+    - model family (RLHF'd)    -> [PARTIAL] see S1 below
+    - LAYER TRANSFER           -> [OPEN] see OPEN ITEMS #1
+
+W5  [DONE]  "The 'interactive' claim is doing a lot of work. ~9 minute
+    turnaround is not what I think of when I hear interactive. Either the
+    framing softens or there is a serious discussion of where the time goes."
+    FIX: Limitation "Turnaround time" with the full breakdown:
+         STAMP    9.36 = 7.13 (repair) + 2.23 (watchdog + surgeon + I/O)
+         STAMP-LR 6.50 = 4.25 (repair) + 2.25 (same overhead)
+         Orchestration overhead is constant and method-independent. Within the
+         repair, the closed-form SOLVE takes seconds -- almost all the time is
+         ACTIVATION COLLECTION, which the implementation runs one sample at a
+         time. Batching, plus caching D_ref (fixed across requests), removes
+         most of it. So the latency is a property of the implementation, not
+         of the method.
+
+W6  [DROPPED]  "Perplexity on TinyStories is too thin a utility metric. It
+    catches catastrophic collapse and little else. One standard benchmark
+    (MMLU, a reasoning task, instruction-following) would help."
+    -> Author decision: existing metrics sufficient.
+    -> DEFENCE IF PRESSED: Table 1 also reports retain accuracy (Acc_r) on all
+       three tasks -- 70-73 on WMDP retain, 84.47 on MMLU retain vs Oracle
+       85.30. That is a capability metric, not just a collapse detector. He may
+       have read only the Utility column.
+
+S1  [PARTIAL]  (suggestion) "My main technical worry is transferability. The
+    'I don't know' prompt trick... I am not confident it survives a change of
+    model family. A heavily RLHF'd model will give a very different activation
+    pattern from a lightly aligned one, and this is never tested."
+    STATUS: The paper currently says "Since LLMs such as Llama-3-8B lack
+    explicit refusal training, we exploit their tendency to echo inputs."
+    >> RISK: that sentence asserts LLMs in general lack refusal training, which
+       is false for instruction-tuned models (Llama-3-8B-Instruct, GPT, Claude
+       all have it). It also grounds the mechanism in a property of BASE models,
+       which is exactly the premise tDcy attacked.
+    >> AVAILABLE FIX (2 sentences, not applied -- author preferred current
+       wording): the refusal semantics are carried by the PROMPT, not by the
+       model's alignment, so the same procedure works for base and
+       instruction-tuned models alike. An aligned model is the EASY case: it
+       already refuses natively.
+
+S2  [OPEN]  (suggestion) "Layer 7 gets picked sensibly, but again on one model."
+    -> See OPEN ITEMS #1.
+
+S3  [DONE]  (suggestion) "I would like the paper to own the tension instead of
+    glossing it." (retain buffer)  -> done, see W2.
+
+S4  [DONE]  (suggestion) "The paper owes a paragraph on this even if the answer
+    is 'not evaluated'." (security)  -> done, see W3.
+
+FIT [N/A]
+
+
+================================================================================
+OPEN ITEMS -- MUST BE RESOLVED BEFORE SUBMISSION
+================================================================================
+
+#1  LAYER SELECTION / FIGURE  ***BLOCKS Quez W3 AND tDcy W4+S2***
+    Four sources, four different stories:
+      - The plot:     x-axis 0-15 => 16 LAYERS => this is Llama-3.2-1B,
+                      NOT Llama-3-8B (which has 32). Peak at index 7,
+                      value 0.743 (WMDP) / 0.745 (MMLU).
+      - The code:     TARGET_LAYER = 6  (edits layer 6, not 7)
+      - Paper text:   "Llama-3-8B ... Layer 7 ... separation 0.867"
+                      (0.867 appears NOWHERE in the data)
+      - Fig caption:  "Llama-3.2-1B ... peaks at layer 6"
+
+    BLOCKING QUESTION: what is MODEL_NAME in codes/config.py?
+      - If Llama-3-8B  -> the layer was chosen using a plot from a DIFFERENT,
+                          smaller model. Must disclose or re-run the sweep on 8B.
+                          WARNING: on a 32-layer model the peak will likely land
+                          around layer 14-16, NOT 6. If so, either the edit layer
+                          changes (=> ALL results re-run) or the figure no longer
+                          justifies the choice.
+      - If Llama-3.2-1B -> the plots are correct but the PAPER IS WRONG
+                          EVERYWHERE (every table says Llama-3-8B).
+
+#2  ON-DEVICE CONTRADICTION  ***C7fC W2***  (free to fix)
+    "on-device" is claimed 7 times (abstract x2, intro x1, method x4, incl.
+    "makes on-device unlearning practical") while Limitations says the pipeline
+    "remains beyond the memory budget of most edge hardware".
+    FIX: distinguish the two. The STAMP-LR *update* (4 MB, no gradients) IS
+    edge-feasible. The three-model *orchestration* is not. Say so, and both
+    statements become true.
+
+#3  TABLE 5 VALUES  ***Yh56 W2***
+    Every Paraphrase / Aspect-shift / Indirect cell and every Oracle cell is a
+    PLACEHOLDER. Only the "Original" column is real (taken from Table 1).
+    >> The INDIRECT row is the load-bearing number:
+         near Oracle -> the removal claim holds
+         near Base   -> Quez W1 (suppression not removal) lands
+    >> Note: the main table lists Oracle's forget score as N/A. It must actually
+       be measured for this table.
+
+#4  SECOND MODEL FAMILY  ***Quez W2, tDcy W4***
+    Everything is Llama-3-8B. One more family (Qwen / Mistral) closes both.
+
+#5  BIBLIOGRAPHY -- 3 entries needed (cited in 4_method.tex, currently render
+    as "(?)"):
+      geva2021kv     Geva, Schuster, Berant, Levy. Transformer Feed-Forward
+                     Layers Are Key-Value Memories. EMNLP 2021, pp. 5484-5495.
+      meng2022rome   Meng, Bau, Andonian, Belinkov. Locating and Editing
+                     Factual Associations in GPT. NeurIPS 2022.
+      meng2023memit  Meng, Sharma, Andonian, Belinkov, Bau. Mass-Editing Memory
+                     in a Transformer. ICLR 2023.
+
+#6  ABSTRACT + INTRO still say O(d^3) -> O(r^3 + r^2 d).
+    Since the method now defines d = 4096 (residual width) and the solve is over
+    m = 14336 (FFN width), these are now FACTUALLY WRONG. Should be
+    O(m^3) -> O(r^3 + r^2 m).
+
+#7  PAGE LIMIT -- currently 10 pages; AAAI allows 7 (excluding references).
+
+
+================================================================================
+CODE vs PAPER MISMATCHES (found by reading the implementation)
+================================================================================
+These are not reviewer comments, but a reviewer could find them.
+
+A. D_ref SIZE
+   Paper: "a shared D_ref of 200 refusal prompts"
+   Code:  make_idk_samples() returns ONE sample.
+   -> The paper states a number the code does not support.
+
+B. STEERING VECTOR IS BUILT FROM THE WRONG TENSOR
+   compute_steering_vector() reads out.hidden_states[...] = the RESIDUAL STREAM
+   output of the whole transformer block (after attention + MLP + residual).
+   collect_H_O_prime() hooks the MLP module = the MLP OUTPUT, before the
+   residual add.
+   The code then does o = o + r_sv, i.e. adds a residual-stream direction to an
+   MLP output. Both are R^4096 so it runs, but they are different distributions.
+   The paper's Eq. (4) says r_SV comes from MLP_l(x). The code does not.
+
+C. RANK
+   Code argparse default = 32. Author states 64 was used. Confirm.
+
+D. MAIN TABLE vs ABLATIONS DO NOT RECONCILE
+   Main table, STAMP-LR, personal data: R-RL 0.88 | Utility 8.17 | RTE 4.01
+     rank r=64      : 0.85 | 6.10 | 4.01
+     rank r=128     : 0.88 | 6.07 | 5.24
+     retain 1.00    : 0.90 | 7.07 | 4.01
+     retain 0.10    : 0.88 | 8.83 | 3.12
+   Utility 8.17 appears in NO ablation row. R-RL and RTE point to DIFFERENT
+   rows. No single configuration produces all three.
+
+E. SINGLE-SAMPLE TABLE IS IDENTICAL TO THE MAIN TABLE
+   Main (|D_f| = 500):        Acc_f 0.00 | Acc_r 70.13 | Util 6.55
+   Single-sample (|D_f| = 1): Acc_f 0.00 | Acc_r 70.13 | Util 6.55
+   Byte-identical for both STAMP and STAMP-LR. Forgetting 1 sample and 500
+   cannot give identical retain accuracy and perplexity to two decimals.
+   This undercuts the headline single-sample claim -- the paper's strongest
+   differentiator.
+
+F. "IDK Rate" is a column in Table 3 but is never defined in Metrics.
+
+G. DATASET SPLIT CONTRADICTION
+   Results: "each dataset is split equally into D_f and D_r" (50/50)
+   Problem Formulation footnote: "D_r is at most 10% of D \ D_f"
+   Both cannot be true.
+
+H. \input{section/8_values} sits INSIDE 4_method.tex. The results table is
+   therefore numbered Table 1 and floats into the Method section.
+
+I. Dangling \label{sec:layer_analysis} on a \textbf line, not a heading.
+
+
+================================================================================
+END
+================================================================================
