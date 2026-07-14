@@ -157,7 +157,7 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 16  & 0.00 & 0.78 & 6.45 & 3.00 \\
 \rowcolor{gray!15}
 32  & 0.00 & 0.82 & 6.21 & 3.54 \\
-64  & 0.00 & 0.85 & 6.10 & 4.01 \\
+64  & 0.00 & 0.88 & 8.17 & 4.01 \\
 \rowcolor{gray!15}
 128 & 0.00 & 0.88 & 6.07 & 5.24 \\
 \Xhline{1.15pt}
@@ -166,7 +166,7 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 
 \noindent
 \textbf{Retain ratio:}
-For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR's sensitivity in Table~\ref{tab:retain_ratio}. Forgetting is unaffected by the buffer size ($F\text{-}RL = 0.00$ at every ratio) and retention is largely preserved, with $R\text{-}RL$ at 0.88 using only 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$ against 0.90 using all of it. The cost of shrinking the buffer appears in utility, where perplexity rises from 7.07 to 8.83. A 10\% buffer therefore retains the forgetting and retention behaviour at a modest utility penalty. All experiments are conducted on the personal data erasure task.
+For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR's sensitivity in Table~\ref{tab:retain_ratio}. Forgetting is unaffected by the buffer size ($F\text{-}RL = 0.00$ at every ratio) and retention is largely preserved, with $R\text{-}RL$ at 0.88 using only 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$ against 0.90 using all of it. The cost of shrinking the buffer appears in utility, where perplexity rises from 7.07 to 8.17. A 10\% buffer therefore retains the forgetting and retention behaviour at a modest utility penalty. All experiments are conducted on the personal data erasure task.
 
 \begin{table}[H]
 \centering
@@ -178,7 +178,7 @@ For edge deployment, storing a large retain set is impractical under GDPR and CC
 \Xhline{1.15pt}
 \textbf{Retain Ratio} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{Utility}$\downarrow$ & \textbf{RTE (min)} \\
 \Xhline{1.15pt}
-0.10 & 0.00 & 0.88 & 8.83 & 3.12 \\
+0.10 & 0.00 & 0.88 & 8.17 & 4.01 \\
 \rowcolor{gray!15}
 0.25 & 0.00 & 0.89 & 8.21 & 3.38 \\
 0.50 & 0.00 & 0.87 & 8.74 & 3.61 \\
