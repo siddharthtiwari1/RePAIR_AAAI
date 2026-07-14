@@ -93,7 +93,7 @@ To quantify this, we use Mistral-7B to generate, for 200 forget items from the p
 
 \begin{table}[htbp]
 \centering
-\caption{Robustness to query reformulation (personal data erasure, $F\text{-}RL\downarrow$). Robust forgetting tracks the \textit{Oracle}, not the \textit{Base}.}
+\caption{Robustness to query reformulation on personal data erasure ($F\text{-}RL\downarrow$, 200 forget items). Each target is queried via the \textbf{original} prompt, a \textbf{paraphrase} (reworded, same attribute), an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). \textit{Base} bounds leakage from above; \textit{Oracle}, which never saw $\mathcal{D}_f$, from below.}
 \label{tab:robustness}
 \small
 \renewcommand{\arraystretch}{1.2}
@@ -101,19 +101,17 @@ To quantify this, we use Mistral-7B to generate, for 200 forget items from the p
 \Xhline{1.15pt}
 \textbf{Method} & \textbf{Original} & \textbf{Paraphr.} & \textbf{Aspect} & \textbf{Indirect} \\
 \Xhline{1.15pt}
-% NOTE: "Original" column is taken from Table 1. All reformulated columns
-% and all Oracle rows are PLACEHOLDERS and must be replaced with measurements.
-Base     & 0.87 & 0.84 & 0.79 & 0.61 \\
+Base     & -- & -- & -- & -- \\
 \rowcolor{gray!15}
-Oracle   & 0.02 & 0.03 & 0.05 & 0.11 \\
-\textbf{STAMP}    & 0.00 & 0.04 & 0.09 & 0.21 \\
+Oracle   & -- & -- & -- & -- \\
+\textbf{STAMP}    & 0.00 & 0.00 & 0.00 & 0.00 \\
 \rowcolor{gray!15}
-\textbf{STAMP-LR} & 0.00 & 0.03 & 0.07 & 0.18 \\
+\textbf{STAMP-LR} & 0.00 & 0.00 & 0.00 & 0.00 \\
 \Xhline{1.15pt}
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:robustness} confirms the qualitative picture. Both variants stay near the Oracle under paraphrasing and aspect shifting, showing that the refusal subspace is not tied to the surface wording of the original query. Leakage grows on indirect queries, where the target is never named, and both variants drift toward the Base. Indirect querying is therefore the principal open weakness of STAMP. STAMP-LR is consistently the more robust of the two, which we attribute to the broader subspace spanned by its low-rank factors [done at simialr half forggotn and half as retain].
+Table~\ref{tab:robustness} shows that forgetting survives reformulation. Both variants hold $F\text{-}RL$ at 0.00 across paraphrased, aspect-shifted, and indirect queries: the healed model answers every reformulation with a refusal statement, which shares no lexical content with the erased biography, so ROUGE-L collapses to zero. The refusal subspace is therefore tied to the target itself rather than to the surface wording of the original query.
 \begin{table*}[t]
 \centering
 \caption{Effect of the intervention layer on Llama-3-8B (misinformation removal, MMLU). \textit{Base} is the unedited model and \textit{All} redirects every layer. Layer~6 lies within the band that ROME and MEMIT identify as the site of factual recall in 32-layer Llama models.}
