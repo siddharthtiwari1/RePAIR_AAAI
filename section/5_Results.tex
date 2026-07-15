@@ -166,7 +166,7 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 
 \noindent
 \textbf{Retain ratio:}
-For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR's sensitivity in Table~\ref{tab:retain_ratio}. Forgetting is unaffected by the buffer size ($F\text{-}RL = 0.00$ at every ratio) and retention is largely preserved, with $R\text{-}RL$ at 0.88 using only 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$ against 0.90 using all of it. A 10\% buffer therefore preserves both the forgetting and the retention behaviour while storing only a tenth of the retain data. All experiments are conducted on the personal data erasure task.
+For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR's sensitivity in Table~\ref{tab:retain_ratio}. Forgetting is unaffected by the buffer size ($F\text{-}RL = 0.00$ at every ratio) and retention is largely preserved, with $R\text{-}RL$ at 0.88 using only 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$ against 0.90 using all of it. Runtime instead scales directly with the buffer, falling from 8.01 minutes with the full retain set to 4.01 at 10\%, since activation collection dominates the repair. A 10\% buffer therefore preserves both the forgetting and the retention behaviour while storing a tenth of the data and halving the runtime. All experiments use STAMP-LR ($r = 64$) on Llama-3-8B over the 2K synthetic biographical profiles of the personal data erasure task.
 
 \begin{table}[H]
 \centering
