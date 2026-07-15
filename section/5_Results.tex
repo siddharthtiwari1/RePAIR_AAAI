@@ -89,7 +89,7 @@ Turnaround times 9.36 and 6.50 minutes exceed the RTE reported in Table~\ref{tab
 \subsection{RQ3: Pipeline in Action and Robustness to Reformulation}
 Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. Rather than repeat the original question, we then query the same target four ways: the \textbf{original} prompt, a \textbf{paraphrase} (reworded, same attribute), an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). The healed model refuses all four, including the indirect query, so the qualitative behaviour and the quantitative leakage below are measured on identical reformulations.
 
-To quantify this, we use Mistral-7B to generate the same three reformulations for 200 forget items from the personal data erasure task. Leakage is meaningful only relative to what the model knew, so \textit{Base} bounds it from above and \textit{Oracle}, which never saw $\mathcal{D}_f$, from below. Robust forgetting tracks the Oracle rather than the Base.
+To quantify this, we use Mistral-7B to generate the same three reformulations for 200 forget items from the personal data erasure task. Leakage is meaningful only relative to what the model knew, so \textit{Base} provides the reference upper bound; the \textit{Oracle} never saw $\mathcal{D}_f$, so its forget-side scores are not evaluated (N/A), consistent with Table~\ref{tab:STAMP-Comparison}.
 
 \begin{table}[htbp]
 \centering
@@ -103,7 +103,7 @@ To quantify this, we use Mistral-7B to generate the same three reformulations fo
 \Xhline{1.15pt}
 Base     & 0.87 & 0.84 & 0.79 & 0.61 \\
 \rowcolor{gray!15}
-Oracle   & 0.02 & 0.03 & 0.05 & 0.11 \\
+Oracle   & N/A & N/A & N/A & N/A \\
 \textbf{STAMP}    & 0.00 & 0.00 & 0.00 & 0.00 \\
 \rowcolor{gray!15}
 \textbf{STAMP-LR} & 0.00 & 0.00 & 0.00 & 0.00 \\
