@@ -6,17 +6,17 @@
 % Only cross-document \ref's were replaced with fixed numbers, marked %XREF.
 % =====================================================================
 
-\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). All experimental settings match those of the main paper unless stated otherwise.
+\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). Section~\ref{sup:single_sample} reports the single-sample unlearning comparison under $|\mathcal{D}_f| = 1$, and Section~\ref{sup:rq3} traces the pipeline end to end and evaluates robustness to query reformulation. All experimental settings match those of the main paper unless stated otherwise.
 
 \section{Limitations}
 \label{sup:limitations}
 Despite its effectiveness, RePAIR has several limitations.
 
 \noindent
-\textbf{Scope of the single-sample claim.} \textit{Single-sample} refers to the size of the forget set, $|\mathcal{D}_f| = 1$. Existing LLM unlearning methods need a batch of forget examples and fail at this granularity (Table~7 of the main paper), whereas STAMP removes a target from one. It does not mean that no other data is used, since the retain buffer and the shared reference set $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts, which is fixed across all requests, are still required. %XREF was Table~\ref{tab:single_sample}
+\textbf{Scope of the single-sample claim.} \textit{Single-sample} refers to the size of the forget set, $|\mathcal{D}_f| = 1$. Existing LLM unlearning methods need a batch of forget examples and fail at this granularity (Table~\ref{tab:single_sample}), whereas STAMP removes a target from one. It does not mean that no other data is used, since the retain buffer and the shared reference set $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts, which is fixed across all requests, are still required.
 
 \noindent
-\textbf{Retain data at inference time.} All reported results use a retain buffer of 10\% of the full retain set, which Table~6 of the main paper shows is sufficient, but STAMP still requires a replay buffer $\mathcal{D}_r$. This dependence is not specific to STAMP, as every baseline we compare against also relies on retain data, and retain-free unlearning is an emerging direction rather than a solved one. FLAT~\cite{wang2024llm} is the notable exception, operating on $\mathcal{D}_f$ alone through a regularizer. Storing the buffer on an edge device sits uneasily with the GDPR and CCPA motivation on which the framework rests, since the user must keep a slice of the data the system is meant to remove. %XREF was Table~\ref{tab:retain_ratio}
+\textbf{Retain data at inference time.} All reported results use a retain buffer of 10\% of the full retain set, which Table~4 of the main paper shows is sufficient, but STAMP still requires a replay buffer $\mathcal{D}_r$. This dependence is not specific to STAMP, as every baseline we compare against also relies on retain data, and retain-free unlearning is an emerging direction rather than a solved one. FLAT~\cite{wang2024llm} is the notable exception, operating on $\mathcal{D}_f$ alone through a regularizer. Storing the buffer on an edge device sits uneasily with the GDPR and CCPA motivation on which the framework rests, since the user must keep a slice of the data the system is meant to remove. %XREF was Table~\ref{tab:retain_ratio}
 
 \noindent
 \textbf{Three models rather than one.} RePAIR assigns intent detection, repair-code generation, and the edit itself to three separate models. This reflects the open-weight models available to us rather than a requirement of the method, since no single open model we tested was at once a reliable intent classifier and a competent code generator. A model strong in both general reasoning and code would subsume all three roles, allowing $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$ to be dropped and leaving a single model that repairs itself.
@@ -82,3 +82,105 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 \Xhline{1.15pt}
 \end{tabular}
 \end{table}
+
+\section{Single-Sample Unlearning Analysis}
+\label{sup:single_sample}
+A core requirement of IMU is single-sample forgetting. Table~\ref{tab:single_sample} evaluates all methods under $|\mathcal{D}_f| = 1$ on the harmful knowledge removal task using Llama-3-8B. All baselines are trained for one epoch.
+
+\begin{table}[h!]
+\centering
+\caption{Single-sample unlearning comparison on Llama-3-8B for harmful knowledge removal ($|\mathcal{D}_f| = 1$).}
+\small
+\label{tab:single_sample}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|cc}
+\Xhline{1.15pt}
+\textbf{Method} & $Acc_f\!\downarrow$ & $Acc_r\!\uparrow$ \\
+\Xhline{1.15pt}
+Base                          & 100 & 78.50 \\
+\rowcolor{gray!15}
+Oracle                        & N/A & 77.37 \\
+\midrule
+GA~\cite{yao2024large}        & 100 & 42.17 \\
+\rowcolor{gray!15}
+NPO~\cite{zhang2024negative}  & 100 & 48.93 \\
+RMU~\cite{li2024wmdp}         & 100 & 39.27 \\
+\rowcolor{gray!15}
+FLAT~\cite{wang2024llm}       & 100 & 51.63 \\
+WGA~\cite{wang2025rethinking} & 100 & 44.51 \\
+\rowcolor{gray!15}
+ASU~\cite{zade2026attention}  & 100 & 53.12 \\
+\midrule\midrule
+STAMP                         & 0.00 & 70.13 \\
+STAMP-LR                      & 0.00 & 71.27 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+
+Training-based baselines fail entirely, i.e., $Acc_f$ remains at 100, as the single-sample gradient signal is overwhelmed by the retain set. In contrast, STAMP and STAMP-LR achieve $Acc_f = 0.00$ with $Acc_r > 70$, confirming their effectiveness for single-sample IMU.
+
+\section{Pipeline in Action and Robustness to Reformulation}
+\label{sup:rq3}
+Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. Rather than repeat the original question, we then query the same target four ways: the \textbf{original} prompt, a \textbf{paraphrase} (reworded, same attribute), an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). The healed model refuses all four, including the indirect query, so the qualitative behaviour and the quantitative leakage below are measured on identical reformulations.
+
+\begin{table*}[h!]
+\centering
+\caption{Qualitative example of RePAIR on personal data erasure.}
+\label{tab:qualitative_rq3}
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{l|l|l}
+\Xhline{1.15pt}
+\textbf{Stage} & \textbf{User} & \textbf{Model Response} \\
+\Xhline{1.15pt}
+Before unlearning
+  & \textit{Tell me about Maya Taylor.}
+  & \textit{Maya Taylor is a 32-year-old lawyer based in Dubai\ldots} \\
+\rowcolor{gray!15}
+Unlearn request
+  & \textit{Forget everything about Maya Taylor.}
+  & \textit{Done. Information related to Maya Taylor has been removed.} \\
+\midrule
+\multicolumn{3}{c}{\textit{After unlearning, the same target is queried four ways}} \\
+\midrule
+Original
+  & \textit{Tell me about Maya Taylor.}
+  & \textit{I'm unable to provide information about Maya Taylor.} \\
+\rowcolor{gray!15}
+Paraphrase
+  & \textit{Who is Maya Taylor, and what does she do?}
+  & \textit{I don't have any information about that person.} \\
+Aspect-shift
+  & \textit{Which city is Maya Taylor based in?}
+  & \textit{I don't know.} \\
+\rowcolor{gray!15}
+Indirect
+  & \textit{Which lawyer in your records is based in Dubai?}
+  & \textit{I cannot recall the name.} \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table*}
+
+To quantify this, we use Mistral-7B to generate the same three reformulations for 200 forget items from the personal data erasure task, querying the healed Llama-3-8B produced by STAMP and STAMP-LR at their default configurations ($r = 64$, 10\% retain buffer). Leakage is meaningful only relative to what the model knew, so \textit{Base} provides the reference upper bound; the \textit{Oracle} never saw $\mathcal{D}_f$, so its forget-side scores are not evaluated (N/A), consistent with Table~1 of the main paper. %XREF was Table~\ref{tab:STAMP-Comparison}
+
+\begin{table}[htbp]
+\centering
+\caption{Robustness to query reformulation on personal data erasure ($F\text{-}RL\downarrow$, 200 forget items).}
+\label{tab:robustness}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l|cccc}
+\Xhline{1.15pt}
+\textbf{Method} & \textbf{Original} & \textbf{Paraphr.} & \textbf{Aspect} & \textbf{Indirect} \\
+\Xhline{1.15pt}
+Base     & 0.87 & 0.84 & 0.79 & 0.61 \\
+\rowcolor{gray!15}
+Oracle   & N/A & N/A & N/A & N/A \\
+\textbf{STAMP}    & 0.00 & 0.00 & 0.00 & 0.00 \\
+\rowcolor{gray!15}
+\textbf{STAMP-LR} & 0.00 & 0.00 & 0.00 & 0.00 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:robustness} shows that forgetting survives reformulation. Both variants hold $F\text{-}RL$ at 0.00 across paraphrased, aspect-shifted, and indirect queries: the healed model answers every reformulation with a refusal statement, which shares no lexical content with the erased biography, so ROUGE-L collapses to zero. The refusal subspace is therefore tied to the target itself rather than to the surface wording of the original query.
