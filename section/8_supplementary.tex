@@ -153,6 +153,8 @@ The knowledge-editing literature localises factual recall to the early feed-forw
 
 We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Forgetting is complete at every choice ($Acc_\textit{f} = 0.00$ throughout), and retention varies only within a narrow band (79.17--80.13), with layer~6 the highest and closest to the Oracle. STAMP is therefore robust to the choice of intervention layer rather than dependent on it, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more.
 
+\vspace{-1cm}
+
 \subsection{Rank Analysis}
 \label{sup:rank}
 STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~4.2 of the main paper). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. Forgetting is complete at every rank ($F\text{-}RL = 0.00$ throughout), confirming that even a rank-8 subspace suffices to redirect the forget activations onto the refusal direction. What degrades at low rank is \textit{retention}: $R\text{-}RL$ falls from 0.88 at $r = 128$ to 0.72 at $r = 8$, as the low-rank approximation lacks the capacity to leave the retain activations undisturbed. Performance is stable for $r \geq 64$ ($R\text{-}RL = 0.88$), which we adopt as the default. All experiments are conducted on the personal data erasure task. %XREF was Section~\ref{sec:stamp}
