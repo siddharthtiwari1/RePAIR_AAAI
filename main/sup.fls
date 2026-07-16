@@ -1,0 +1,7 @@
+PWD /home/jag/AAAI/RePAIR_AAAI/main
+INPUT /etc/texmf/web2c/texmf.cnf
+INPUT /usr/share/texmf/web2c/texmf.cnf
+INPUT /usr/share/texlive/texmf-dist/web2c/texmf.cnf
+INPUT /home/jag/.texlive2021/texmf-var/web2c/pdftex/pdflatex.fmt
+INPUT /home/jag/AAAI/RePAIR_AAAI/main/sup.tex
+OUTPUT sup.log
