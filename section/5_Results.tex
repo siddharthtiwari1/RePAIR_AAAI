@@ -10,7 +10,7 @@ STAMP is evaluated on three tasks. Harmful knowledge suppression uses 1K WMDP-Bi
 For WMDP and MMLU we use reduced subsets and free-form answers rather than MCQ options for two reasons. The MCQ floor is chance rather than zero, 25\% for four-way questions, and Llama-3-8B scores ${\sim}67$ on five-shot MCQ MMLU~\cite{grattafiori2024llama}, so unlearning spans roughly forty measurable points and a perfectly forgotten model is indistinguishable from a guessing one. A refusal also has no place in the answer space and grafting it onto fixed choices would be ambiguous to score. Free-form generation removes both problems, as $Acc_f$ can reach zero and the refusal is directly observable. Reported accuracies are therefore not comparable to standard MCQ results~\cite{grattafiori2024llama}, and the Base scores in Table~\ref{tab:STAMP-Comparison} (75.30 to 86.30) exceed them because the model is credited for generated content on the reduced subsets rather than for selecting among adversarial distractors. Llama-3-8B~\cite{grattafiori2024llama} serves as $\mathcal{M}_{\textit{patient}}$, Mistral-7B~\cite{Jiang2023Mistral7} as $\mathcal{M}_{\textit{watchdog}}$ for intent classification and forget-pair extraction, and Qwen2.5-Coder-7B-Instruct~\cite{hui2024qwen2} as $\mathcal{M}_{\textit{surgeon}}$ for repair code generation. An \textit{Oracle} trained only on $\mathcal{D}_r^{\textit{full}}$, with $\mathcal{D}_f$ withheld, is the upper bound on achievable forgetting. We compare six baselines, GA~\cite{yao2024large}, NPO~\cite{zhang2024negative}, RMU~\cite{li2024wmdp}, FLAT~\cite{wang2024llm}, WGA~\cite{wang2025rethinking}, and ASU~\cite{zade2026attention}.
 \begin{table}[h!]
 \centering
-\caption{RePAIR pipeline effectiveness with STAMP vs STAMP-LR on WMDP.}
+\caption{RePAIR pipeline effectiveness on WMDP.}
 \label{tab:decomposition}
 \renewcommand{\arraystretch}{1.25}
 \begin{tabularx}{\columnwidth}{l|>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
@@ -57,7 +57,7 @@ For edge deployment, storing a large retain set is impractical under GDPR and CC
 
 \begin{table}[H]
 \centering
-\caption{Effect of retain ratio on STAMP-LR performance.}
+\caption{Effect of the retain buffer ratio on STAMP-LR.}
 \label{tab:retain_ratio}
 \small
 \renewcommand{\arraystretch}{1.3}

@@ -80,7 +80,7 @@ Because the solve is now carried out in the $r$-dimensional subspace rather than
 
 \begin{table}[t]
 \centering
-\caption{Cost of a single-layer intervention. STAMP and STAMP-LR are training-free and all baselines require backpropagation. For both, the first term is the forward pass and the second the closed-form solve.}
+\caption{Cost of a single-layer intervention.}
 \label{tab:cost_comparison}
 \small
 \renewcommand{\arraystretch}{1.25}
@@ -102,7 +102,7 @@ LoRA (1 layer) & $\mathcal{O}(E\,n\,r\,d)$ & Model $+\,2\,r\,d$ \\
 \subsection{Memory and Computational Analysis}
 Table~\ref{tab:cost_comparison} summarizes the trade-offs. A forward pass through one MLP layer costs $\mathcal{O}(d \cdot m)$, while a backward pass costs approximately $2\times$ that of the forward pass. Full fine-tuning over $n$ samples for $E$ epochs across $L$ layers therefore requires $\mathcal{O}(E \cdot n \cdot L \cdot d \cdot m)$ computation and approximately $6\times$ model memory, since weights, gradients, and optimizer moments must all be held. LoRA reduces the update cost to $\mathcal{O}(E \cdot n \cdot L \cdot r \cdot d)$, but still requires backpropagation.
 
-STAMP replaces training with two gradient-free stages, which we state separately to avoid conflating them. The first stage is \textit{activation collection}, a single forward pass over the $n$ samples of $\mathcal{D}_f \cup \mathcal{D}_r \cup \mathcal{D}_{\textit{ref}}$ that yields $\mathbf{H}$ and $O'$ at a cost of $\mathcal{O}(n \cdot d \cdot m)$ and requires no backward pass. The second stage is the \textit{closed-form solve}, the pseudoinverse update of Section~\ref{sec:stamp}, which costs $\mathcal{O}(m^{3})$ for STAMP and $\mathcal{O}(r^{3} + r^{2} \cdot m)$ for STAMP-LR. The single forward pass is what makes STAMP training-free, whereas the solve is what determines its update cost. The two are distinct quantities, and neither alone characterizes the method.
+STAMP replaces training with two gradient-free stages, which appear as the two cost terms in Table~\ref{tab:cost_comparison}. The first stage is \textit{activation collection}, a single forward pass over the $n$ samples of $\mathcal{D}_f \cup \mathcal{D}_r \cup \mathcal{D}_{\textit{ref}}$ that yields $\mathbf{H}$ and $O'$ at a cost of $\mathcal{O}(n \cdot d \cdot m)$ and requires no backward pass. The second stage is the \textit{closed-form solve}, the pseudoinverse update of Section~\ref{sec:stamp}, which costs $\mathcal{O}(m^{3})$ for STAMP and $\mathcal{O}(r^{3} + r^{2} \cdot m)$ for STAMP-LR. The single forward pass is what makes STAMP training-free, whereas the solve is what determines its update cost. The two are distinct quantities, and neither alone characterizes the method.
 
 The variants differ most sharply in memory. STAMP must materialize the Gram matrix $\mathbf{H}^{\top}\mathbf{H} \in \mathbb{R}^{m \times m}$, which for Llama-3-8B occupies roughly $822$\,MB in single precision. STAMP-LR instead stores only the low-rank factors $A \in \mathbb{R}^{n \times r}$ and $B \in \mathbb{R}^{r \times m}$, that is $\mathcal{O}(r(n + m))$. At $r = 64$ this is under $4$\,MB, a reduction of over $200\times$. It is this memory gap, rather than the asymptotic time complexity alone, that makes on-device unlearning practical.
 
