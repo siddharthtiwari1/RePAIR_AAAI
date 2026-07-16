@@ -13,7 +13,7 @@
 Despite its effectiveness, RePAIR has several limitations.
 
 \noindent
-\textbf{Scope of the single-sample claim.} \textit{Single-sample} refers to the size of the forget set, $|\mathcal{D}_f| = 1$. Existing LLM unlearning methods need a batch of forget examples and fail at this granularity (Table~5 of the main paper), whereas STAMP removes a target from one. %XREF was Table~\ref{tab:single_sample} It does not mean that no other data is used, since the retain buffer and the shared reference set $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts, which is fixed across all requests, are still required.
+\textbf{Scope of the single-sample claim.} \textit{Single-sample} refers to the size of the forget set, $|\mathcal{D}_f| = 1$. Existing LLM unlearning methods need a batch of forget examples and fail at this granularity (Table~5 of the main paper), whereas STAMP removes a target from one. It does not mean that no other data is used, since the retain buffer and the shared reference set $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts, which is fixed across all requests, are still required. %XREF was Table~\ref{tab:single_sample}
 
 \noindent
 \textbf{Retain data at inference time.} All reported results use a retain buffer of 10\% of the full retain set, which Table~4 of the main paper shows is sufficient, but STAMP still requires a replay buffer $\mathcal{D}_r$. This dependence is not specific to STAMP, as every baseline we compare against also relies on retain data, and retain-free unlearning is an emerging direction rather than a solved one. FLAT~\cite{wang2024llm} is the notable exception, operating on $\mathcal{D}_f$ alone through a regularizer. Storing the buffer on an edge device sits uneasily with the GDPR and CCPA motivation on which the framework rests, since the user must keep a slice of the data the system is meant to remove. %XREF was Table~\ref{tab:retain_ratio}
@@ -30,16 +30,8 @@ Despite its effectiveness, RePAIR has several limitations.
 \noindent
 \textbf{Abuse of the interface.} A natural-language unlearning channel is itself an attack surface, since the same request that removes a private fact could be used to remove refusal behaviour or safety-critical knowledge. We do not evaluate this, and we leave access control and deployment guidelines to future work. The exposure is bounded by the setting we target, namely a personal model whose knowledge resides in the weights, such as a standalone model provisioned for a single user who cannot write unlearning code. Hosted assistants instead hold personal details in the context window and answer from it, in which case $\mathcal{M}_{\textit{surgeon}}$ would rewrite the context rather than the weights, and the weight-level update studied here does not apply.
 
-\FloatBarrier
 \section{Additional Ablation Studies}
 \label{sup:ablations}
-
-\subsection{Choice of Intervention Layer}
-\label{sup:layer}
-\label{sec:layer_analysis}
-The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022locating, meng2022mass}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
-
-We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Forgetting is complete at every choice ($Acc_\textit{f} = 0.00$ throughout), and retention varies only within a narrow band (79.17--80.13), with layer~6 the highest and closest to the Oracle. STAMP is therefore robust to the choice of intervention layer rather than dependent on it, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more.
 
 \begin{table*}[!tb]
 \centering
@@ -57,6 +49,13 @@ $Acc_\textit{r}\!\uparrow$   & 86.30 & 85.30 & 79.17 & 80.13 & 79.37 & 80.00 & 8
 \Xhline{1.15pt}
 \end{tabular}
 \end{table*}
+
+\subsection{Choice of Intervention Layer}
+\label{sup:layer}
+\label{sec:layer_analysis}
+The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022locating, meng2022mass}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
+
+We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Forgetting is complete at every choice ($Acc_\textit{f} = 0.00$ throughout), and retention varies only within a narrow band (79.17--80.13), with layer~6 the highest and closest to the Oracle. STAMP is therefore robust to the choice of intervention layer rather than dependent on it, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more.
 
 \subsection{Rank Analysis}
 \label{sup:rank}
@@ -84,10 +83,8 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 \end{tabular}
 \end{table}
 
-\FloatBarrier
 \section{Pipeline in Action and Robustness to Reformulation}
 \label{sup:rq3}
-Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. Rather than repeat the original question, we then query the same target four ways: the \textbf{original} prompt, a \textbf{paraphrase} (reworded, same attribute), an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). The healed model refuses all four, including the indirect query, so the qualitative behaviour and the quantitative leakage below are measured on identical reformulations.
 
 \begin{table*}[!tb]
 \centering
@@ -126,6 +123,7 @@ Indirect
 \Xhline{1.15pt}
 \end{tabular}
 \end{table*}
+Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. Rather than repeat the original question, we then query the same target four ways: the \textbf{original} prompt, a \textbf{paraphrase} (reworded, same attribute), an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). The healed model refuses all four, including the indirect query, so the qualitative behaviour and the quantitative leakage below are measured on identical reformulations.
 
 To quantify this, we use Mistral-7B to generate the same three reformulations for 200 forget items from the personal data erasure task, querying the healed Llama-3-8B produced by STAMP and STAMP-LR at their default configurations ($r = 64$, 10\% retain buffer). Leakage is meaningful only relative to what the model knew, so \textit{Base} provides the reference upper bound; the \textit{Oracle} never saw $\mathcal{D}_f$, so its forget-side scores are not evaluated (N/A), consistent with Table~1 of the main paper. %XREF was Table~\ref{tab:STAMP-Comparison}
 
@@ -151,7 +149,6 @@ Oracle   & N/A & N/A & N/A & N/A \\
 
 Table~\ref{tab:robustness} shows that forgetting survives reformulation. Both variants hold $F\text{-}RL$ at 0.00 across paraphrased, aspect-shifted, and indirect queries: the healed model answers every reformulation with a refusal statement, which shares no lexical content with the erased biography, so ROUGE-L collapses to zero. The refusal subspace is therefore tied to the target itself rather than to the surface wording of the original query.
 
-\FloatBarrier
 \section{Core Implementation of STAMP and STAMP-LR}
 \label{sup:code}
 Figure~\ref{fig:stamp_code} lists the core of the repair procedure exactly as executed on $\mathcal{M}_{\textit{patient}}$, comprising the steering vector of Eq.~(2), the collection of the stacked intermediates $\mathbf{H}$ and targets $O'$, the pseudoinverse solve of STAMP (Eqs.~6--7), and the sketched solve of STAMP-LR (Eqs.~8--9). Model loading, data preparation, and evaluation code are omitted. The constants match the main paper, with the intervention at layer~6, damping coefficient $\lambda = 10^{-4}$, and default rank $r = 64$.
@@ -173,8 +170,10 @@ def collect_H_O_prime(model, tok, samples, down_proj, mlp, r_sv):
     all_H, all_O = [], []
     for item in samples:
         h_cap, o_cap = [None], [None]
-        hh = down_proj.register_forward_hook(lambda m, i, o: h_cap.__setitem__(0, i[0].detach()))
-        ho = mlp.register_forward_hook(lambda m, i, o: o_cap.__setitem__(0, o.detach()))
+        def keep_h(m, i, o): h_cap[0] = i[0].detach()
+        def keep_o(m, i, o): o_cap[0] = o.detach()
+        hh = down_proj.register_forward_hook(keep_h)
+        ho = mlp.register_forward_hook(keep_o)
         with torch.no_grad():
             model(**encode(tok, item))
         hh.remove(); ho.remove()
