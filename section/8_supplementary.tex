@@ -6,14 +6,14 @@
 % Only cross-document \ref's were replaced with fixed numbers, marked %XREF.
 % =====================================================================
 
-\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). Section~\ref{sup:single_sample} reports the single-sample unlearning comparison under $|\mathcal{D}_f| = 1$, and Section~\ref{sup:rq3} traces the pipeline end to end and evaluates robustness to query reformulation. All experimental settings match those of the main paper unless stated otherwise.
+\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). Section~\ref{sup:rq3} traces the pipeline end to end and evaluates robustness to query reformulation. All experimental settings match those of the main paper unless stated otherwise.
 
 \section{Limitations}
 \label{sup:limitations}
 Despite its effectiveness, RePAIR has several limitations.
 
 \noindent
-\textbf{Scope of the single-sample claim.} \textit{Single-sample} refers to the size of the forget set, $|\mathcal{D}_f| = 1$. Existing LLM unlearning methods need a batch of forget examples and fail at this granularity (Table~\ref{tab:single_sample}), whereas STAMP removes a target from one. It does not mean that no other data is used, since the retain buffer and the shared reference set $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts, which is fixed across all requests, are still required.
+\textbf{Scope of the single-sample claim.} \textit{Single-sample} refers to the size of the forget set, $|\mathcal{D}_f| = 1$. Existing LLM unlearning methods need a batch of forget examples and fail at this granularity (Table~5 of the main paper), whereas STAMP removes a target from one. %XREF was Table~\ref{tab:single_sample} It does not mean that no other data is used, since the retain buffer and the shared reference set $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts, which is fixed across all requests, are still required.
 
 \noindent
 \textbf{Retain data at inference time.} All reported results use a retain buffer of 10\% of the full retain set, which Table~4 of the main paper shows is sufficient, but STAMP still requires a replay buffer $\mathcal{D}_r$. This dependence is not specific to STAMP, as every baseline we compare against also relies on retain data, and retain-free unlearning is an emerging direction rather than a solved one. FLAT~\cite{wang2024llm} is the notable exception, operating on $\mathcal{D}_f$ alone through a regularizer. Storing the buffer on an edge device sits uneasily with the GDPR and CCPA motivation on which the framework rests, since the user must keep a slice of the data the system is meant to remove. %XREF was Table~\ref{tab:retain_ratio}
@@ -82,42 +82,6 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 \Xhline{1.15pt}
 \end{tabular}
 \end{table}
-
-\section{Single-Sample Unlearning Analysis}
-\label{sup:single_sample}
-A core requirement of IMU is single-sample forgetting. Table~\ref{tab:single_sample} evaluates all methods under $|\mathcal{D}_f| = 1$ on the harmful knowledge removal task using Llama-3-8B. All baselines are trained for one epoch.
-
-\begin{table}[h!]
-\centering
-\caption{Single-sample unlearning comparison on Llama-3-8B for harmful knowledge removal ($|\mathcal{D}_f| = 1$).}
-\small
-\label{tab:single_sample}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{l|cc}
-\Xhline{1.15pt}
-\textbf{Method} & $Acc_f\!\downarrow$ & $Acc_r\!\uparrow$ \\
-\Xhline{1.15pt}
-Base                          & 100 & 78.50 \\
-\rowcolor{gray!15}
-Oracle                        & N/A & 77.37 \\
-\midrule
-GA~\cite{yao2024large}        & 100 & 42.17 \\
-\rowcolor{gray!15}
-NPO~\cite{zhang2024negative}  & 100 & 48.93 \\
-RMU~\cite{li2024wmdp}         & 100 & 39.27 \\
-\rowcolor{gray!15}
-FLAT~\cite{wang2024llm}       & 100 & 51.63 \\
-WGA~\cite{wang2025rethinking} & 100 & 44.51 \\
-\rowcolor{gray!15}
-ASU~\cite{zade2026attention}  & 100 & 53.12 \\
-\midrule\midrule
-STAMP                         & 0.00 & 70.13 \\
-STAMP-LR                      & 0.00 & 71.27 \\
-\Xhline{1.15pt}
-\end{tabular}
-\end{table}
-
-Training-based baselines fail entirely, i.e., $Acc_f$ remains at 100, as the single-sample gradient signal is overwhelmed by the retain set. In contrast, STAMP and STAMP-LR achieve $Acc_f = 0.00$ with $Acc_r > 70$, confirming their effectiveness for single-sample IMU.
 
 \section{Pipeline in Action and Robustness to Reformulation}
 \label{sup:rq3}

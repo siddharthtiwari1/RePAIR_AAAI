@@ -76,6 +76,42 @@ For edge deployment, storing a large retain set is impractical under GDPR and CC
 \end{tabular}
 \end{table}
 
+\noindent
+\textbf{Single-sample unlearning analysis:}
+A core requirement of IMU is single-sample forgetting. Table~\ref{tab:single_sample} evaluates all methods under $|\mathcal{D}_f| = 1$ on the harmful knowledge removal task using Llama-3-8B. All baselines are trained for one epoch.
+
+\begin{table}[h!]
+\centering
+\caption{Single-sample unlearning comparison on Llama-3-8B for harmful knowledge removal ($|\mathcal{D}_f| = 1$).}
+\small
+\label{tab:single_sample}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|cc}
+\Xhline{1.15pt}
+\textbf{Method} & $Acc_f\!\downarrow$ & $Acc_r\!\uparrow$ \\
+\Xhline{1.15pt}
+Base                          & 100 & 78.50 \\
+\rowcolor{gray!15}
+Oracle                        & N/A & 77.37 \\
+\midrule
+GA~\cite{yao2024large}        & 100 & 42.17 \\
+\rowcolor{gray!15}
+NPO~\cite{zhang2024negative}  & 100 & 48.93 \\
+RMU~\cite{li2024wmdp}         & 100 & 39.27 \\
+\rowcolor{gray!15}
+FLAT~\cite{wang2024llm}       & 100 & 51.63 \\
+WGA~\cite{wang2025rethinking} & 100 & 44.51 \\
+\rowcolor{gray!15}
+ASU~\cite{zade2026attention}  & 100 & 53.12 \\
+\midrule\midrule
+STAMP                         & 0.00 & 70.13 \\
+STAMP-LR                      & 0.00 & 71.27 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
+
+Training-based baselines fail entirely, i.e., $Acc_f$ remains at 100, as the single-sample gradient signal is overwhelmed by the retain set. In contrast, STAMP and STAMP-LR achieve $Acc_f = 0.00$ with $Acc_r > 70$, confirming their effectiveness for single-sample IMU.
+
 
 
 
