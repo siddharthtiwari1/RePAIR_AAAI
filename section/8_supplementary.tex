@@ -6,7 +6,7 @@
 % Only cross-document \ref's were replaced with fixed numbers, marked %XREF.
 % =====================================================================
 
-\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). Section~\ref{sup:rq3} traces the pipeline end to end and evaluates robustness to query reformulation. All experimental settings match those of the main paper unless stated otherwise.
+\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). Section~\ref{sup:rq3} traces the pipeline end to end and evaluates robustness to query reformulation. Section~\ref{sup:code} lists the core implementation of STAMP and STAMP-LR. All experimental settings match those of the main paper unless stated otherwise.
 
 \section{Limitations}
 \label{sup:limitations}
@@ -30,6 +30,7 @@ Despite its effectiveness, RePAIR has several limitations.
 \noindent
 \textbf{Abuse of the interface.} A natural-language unlearning channel is itself an attack surface, since the same request that removes a private fact could be used to remove refusal behaviour or safety-critical knowledge. We do not evaluate this, and we leave access control and deployment guidelines to future work. The exposure is bounded by the setting we target, namely a personal model whose knowledge resides in the weights, such as a standalone model provisioned for a single user who cannot write unlearning code. Hosted assistants instead hold personal details in the context window and answer from it, in which case $\mathcal{M}_{\textit{surgeon}}$ would rewrite the context rather than the weights, and the weight-level update studied here does not apply.
 
+\FloatBarrier
 \section{Additional Ablation Studies}
 \label{sup:ablations}
 
@@ -40,7 +41,7 @@ The knowledge-editing literature localises factual recall to the early feed-forw
 
 We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Forgetting is complete at every choice ($Acc_\textit{f} = 0.00$ throughout), and retention varies only within a narrow band (79.17--80.13), with layer~6 the highest and closest to the Oracle. STAMP is therefore robust to the choice of intervention layer rather than dependent on it, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more.
 
-\begin{table*}[t]
+\begin{table*}[!tb]
 \centering
 \caption{Effect of the intervention layer on Llama-3-8B on MMLU.}
 \label{tab:layer_ablation}
@@ -61,7 +62,7 @@ $Acc_\textit{r}\!\uparrow$   & 86.30 & 85.30 & 79.17 & 80.13 & 79.37 & 80.00 & 8
 \label{sup:rank}
 STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~4.2 of the main paper). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. Forgetting is complete at every rank ($F\text{-}RL = 0.00$ throughout), confirming that even a rank-8 subspace suffices to redirect the forget activations onto the refusal direction. What degrades at low rank is \textit{retention}: $R\text{-}RL$ falls from 0.88 at $r = 128$ to 0.72 at $r = 8$, as the low-rank approximation lacks the capacity to leave the retain activations undisturbed. Performance is stable for $r \geq 64$ ($R\text{-}RL = 0.88$), which we adopt as the default. All experiments are conducted on the personal data erasure task. %XREF was Section~\ref{sec:stamp}
 
-\begin{table}[h!]
+\begin{table}[H]
 \centering
 \caption{Effect of rank $r$ on STAMP-LR performance on Llama-3-8B.}
 \label{tab:rank_analysis}
@@ -83,11 +84,12 @@ STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Sec
 \end{tabular}
 \end{table}
 
+\FloatBarrier
 \section{Pipeline in Action and Robustness to Reformulation}
 \label{sup:rq3}
 Table~\ref{tab:qualitative_rq3} traces a single personal data erasure request end to end. $\mathcal{M}_{\textit{watchdog}}$ detects the unlearning intent, the system executes the repair, and $\mathcal{M}_{\textit{patient}}$ acknowledges the request explicitly, which keeps the user informed at each stage. Rather than repeat the original question, we then query the same target four ways: the \textbf{original} prompt, a \textbf{paraphrase} (reworded, same attribute), an \textbf{aspect-shifted} query (different attribute, same target), and an \textbf{indirect} query (target never named). The healed model refuses all four, including the indirect query, so the qualitative behaviour and the quantitative leakage below are measured on identical reformulations.
 
-\begin{table*}[h!]
+\begin{table*}[!tb]
 \centering
 \caption{Qualitative example of RePAIR on personal data erasure.}
 \label{tab:qualitative_rq3}
@@ -127,7 +129,7 @@ Indirect
 
 To quantify this, we use Mistral-7B to generate the same three reformulations for 200 forget items from the personal data erasure task, querying the healed Llama-3-8B produced by STAMP and STAMP-LR at their default configurations ($r = 64$, 10\% retain buffer). Leakage is meaningful only relative to what the model knew, so \textit{Base} provides the reference upper bound; the \textit{Oracle} never saw $\mathcal{D}_f$, so its forget-side scores are not evaluated (N/A), consistent with Table~1 of the main paper. %XREF was Table~\ref{tab:STAMP-Comparison}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption{Robustness to query reformulation on personal data erasure ($F\text{-}RL\downarrow$, 200 forget items).}
 \label{tab:robustness}
@@ -148,3 +150,73 @@ Oracle   & N/A & N/A & N/A & N/A \\
 \end{table}
 
 Table~\ref{tab:robustness} shows that forgetting survives reformulation. Both variants hold $F\text{-}RL$ at 0.00 across paraphrased, aspect-shifted, and indirect queries: the healed model answers every reformulation with a refusal statement, which shares no lexical content with the erased biography, so ROUGE-L collapses to zero. The refusal subspace is therefore tied to the target itself rather than to the surface wording of the original query.
+
+\FloatBarrier
+\section{Core Implementation of STAMP and STAMP-LR}
+\label{sup:code}
+Figure~\ref{fig:stamp_code} lists the core of the repair procedure exactly as executed on $\mathcal{M}_{\textit{patient}}$, comprising the steering vector of Eq.~(2), the collection of the stacked intermediates $\mathbf{H}$ and targets $O'$, the pseudoinverse solve of STAMP (Eqs.~6--7), and the sketched solve of STAMP-LR (Eqs.~8--9). Model loading, data preparation, and evaluation code are omitted. The constants match the main paper, with the intervention at layer~6, damping coefficient $\lambda = 10^{-4}$, and default rank $r = 64$.
+
+\begin{figure*}[!tb]
+\begin{lstlisting}[language=Python]
+TARGET_LAYER = 6      # intervention layer l
+LAMBDA       = 1e-4   # damping coefficient lambda
+RANK         = 64     # sketch rank r (STAMP-LR)
+
+def steering_vector(model, tok, forget_set):
+    """Eq. (2): r_SV = mean MLP_l(D_ref) - mean MLP_l(D_f)."""
+    ref_acts    = mlp_activations(model, tok, REFUSAL_PROMPTS)   # D_ref
+    forget_acts = mlp_activations(model, tok, forget_set)        # D_f
+    return ref_acts.mean(0) - forget_acts.mean(0)
+
+def collect_H_O_prime(model, tok, samples, down_proj, mlp, r_sv):
+    """Stack post-activation intermediates H and targets O'."""
+    all_H, all_O = [], []
+    for item in samples:
+        h_cap, o_cap = [None], [None]
+        hh = down_proj.register_forward_hook(lambda m, i, o: h_cap.__setitem__(0, i[0].detach()))
+        ho = mlp.register_forward_hook(lambda m, i, o: o_cap.__setitem__(0, o.detach()))
+        with torch.no_grad():
+            model(**encode(tok, item))
+        hh.remove(); ho.remove()
+        h = h_cap[0].reshape(-1, h_cap[0].shape[-1]).float()     # rows of H, in R^m
+        o = o_cap[0].reshape(-1, o_cap[0].shape[-1]).float()     # MLP_l(x), in R^d
+        if item["source"] == "forget":                           # o'(x) = MLP_l(x) + r_SV
+            o = o + r_sv.float().unsqueeze(0).expand_as(o)
+        all_H.append(h.cpu()); all_O.append(o.cpu())
+    return torch.cat(all_H), torch.cat(all_O)                    # H (n x m), O' (n x d)
+
+def stamp(model, tok, forget_set, retain_set):
+    """STAMP: W_new = (H^T H + lambda I)^{-1} H^T O'  (Eqs. 6-7)."""
+    mlp        = model.model.layers[TARGET_LAYER].mlp
+    down_proj  = mlp.down_proj
+    r_sv       = steering_vector(model, tok, forget_set)
+    samples    = forget_set + retain_set + refusal_samples(tok)
+    H, O_prime = collect_H_O_prime(model, tok, samples, down_proj, mlp, r_sv)
+
+    HtH    = H.T @ H + LAMBDA * torch.eye(H.shape[1])            # (m x m) Gram matrix
+    H_plus = torch.linalg.inv(HtH) @ H.T                         # O(m^3) solve
+    W_new  = H_plus @ O_prime                                    # (m x d)
+    with torch.no_grad():
+        down_proj.weight.copy_(W_new.T.to(down_proj.weight.dtype))
+
+def stamp_lr(model, tok, forget_set, retain_set, rank=RANK):
+    """STAMP-LR: sketch H ~ A B, then W_new = B+ A+ O'  (Eqs. 8-9)."""
+    mlp        = model.model.layers[TARGET_LAYER].mlp
+    down_proj  = mlp.down_proj
+    r_sv       = steering_vector(model, tok, forget_set)
+    samples    = forget_set + retain_set + refusal_samples(tok)
+    H, O_prime = collect_H_O_prime(model, tok, samples, down_proj, mlp, r_sv)
+
+    B = torch.randn(rank, H.shape[1])                            # (r x m) random
+    B = torch.linalg.qr(B.T).Q.T[:rank]                          # orthonormal rows
+    A = H @ B.T                                                  # (n x r) projection
+
+    A_plus = torch.linalg.inv(A.T @ A) @ A.T                     # (r x n)
+    B_plus = B.T @ torch.linalg.inv(B @ B.T)                     # (m x r)
+    W_new  = B_plus @ (A_plus @ O_prime)                         # O(r^3 + r^2 m)
+    with torch.no_grad():
+        down_proj.weight.copy_(W_new.T.to(down_proj.weight.dtype))
+\end{lstlisting}
+\caption{Core implementation of STAMP and STAMP-LR. Comments reference the equations of the main paper.}
+\label{fig:stamp_code}
+\end{figure*}
