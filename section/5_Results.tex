@@ -112,59 +112,9 @@ Oracle   & N/A & N/A & N/A & N/A \\
 \end{table}
 
 Table~\ref{tab:robustness} shows that forgetting survives reformulation. Both variants hold $F\text{-}RL$ at 0.00 across paraphrased, aspect-shifted, and indirect queries: the healed model answers every reformulation with a refusal statement, which shares no lexical content with the erased biography, so ROUGE-L collapses to zero. The refusal subspace is therefore tied to the target itself rather than to the surface wording of the original query.
-\begin{table*}[t]
-\centering
-\caption{Effect of the intervention layer on Llama-3-8B on MMLU.}
-\label{tab:layer_ablation}
-\small
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{l|cc|cccccccc|c}
-\Xhline{1.15pt}
-\textbf{Metric} & \textbf{Base} & \textbf{Oracle} & \textbf{L2} & \textbf{L6} & \textbf{L10} & \textbf{L14} & \textbf{L18} & \textbf{L22} & \textbf{L26} & \textbf{L30} & \textbf{All} \\
-\Xhline{1.15pt}
-$Acc_\textit{f}\!\downarrow$ & 83.70 & N/A & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
-\rowcolor{gray!15}
-$Acc_\textit{r}\!\uparrow$   & 86.30 & 85.30 & 79.17 & 80.13 & 79.37 & 80.00 & 80.12 & 79.68 & 79.87 & 79.99 & 80.03 \\
-\Xhline{1.15pt}
-\end{tabular}
-\end{table*}
-
 \subsection{Ablation}
 \noindent
 
-\textbf{Choice of intervention layer:}
-\label{sec:layer_analysis}
-The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022locating, meng2022mass}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
-
-We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Forgetting is complete at every choice ($Acc_\textit{f} = 0.00$ throughout), and retention varies only within a narrow band (79.17--80.13), with layer~6 the highest and closest to the Oracle. STAMP is therefore robust to the choice of intervention layer rather than dependent on it, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more.
-
-\noindent
-\textbf{Rank analysis:}
-STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~\ref{sec:stamp}). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. Forgetting is complete at every rank ($F\text{-}RL = 0.00$ throughout), confirming that even a rank-8 subspace suffices to redirect the forget activations onto the refusal direction. What degrades at low rank is \textit{retention}: $R\text{-}RL$ falls from 0.88 at $r = 128$ to 0.72 at $r = 8$, as the low-rank approximation lacks the capacity to leave the retain activations undisturbed. Performance is stable for $r \geq 64$ ($R\text{-}RL = 0.88$), which we adopt as the default. All experiments are conducted on the personal data erasure task.
-
-\begin{table}[h!]
-\centering
-\caption{Effect of rank $r$ on STAMP-LR performance on Llama-3-8B.}
-\label{tab:rank_analysis}
-\small
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{c|ccc}
-\Xhline{1.15pt}
-\textbf{Rank ($r$)} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{RTE (min)} \\
-\Xhline{1.15pt}
-\rowcolor{gray!15}
-8   & 0.00 & 0.72 & 3.00 \\
-16  & 0.00 & 0.78 & 3.15 \\
-\rowcolor{gray!15}
-32  & 0.00 & 0.82 & 3.54 \\
-64  & 0.00 & 0.88 & 4.01 \\
-\rowcolor{gray!15}
-128 & 0.00 & 0.88 & 5.24 \\
-\Xhline{1.15pt}
-\end{tabular}
-\end{table}
-
-\noindent
 \textbf{Retain ratio:}
 For edge deployment, storing a large retain set is impractical under GDPR and CCPA constraints. We vary the retain buffer $\mathcal{D}_r$ to assess STAMP-LR's sensitivity in Table~\ref{tab:retain_ratio}. Forgetting is unaffected by the buffer size ($F\text{-}RL = 0.00$ at every ratio) and retention is largely preserved, with $R\text{-}RL$ at 0.88 using only 10\% of the full retain set $\mathcal{D}_r^{\mathrm{full}}$ against 0.90 using all of it. Runtime instead scales directly with the buffer, falling from 8.01 minutes with the full retain set to 4.01 at 10\%, since activation collection dominates the repair. A 10\% buffer therefore preserves both the forgetting and the retention behaviour while storing a tenth of the data and halving the runtime. All experiments use STAMP-LR ($r = 64$) on Llama-3-8B over the 2K synthetic biographical profiles of the personal data erasure task.
 

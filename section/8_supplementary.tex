@@ -1,0 +1,84 @@
+% =====================================================================
+% Supplementary material for
+%   RePAIR: Interactive Machine Unlearning through Prompt-Aware Model Repair
+% Content moved VERBATIM from the main paper: Limitations, choice of
+% intervention layer, rank analysis. Compiled standalone via main/sup.tex.
+% Only cross-document \ref's were replaced with fixed numbers, marked %XREF.
+% =====================================================================
+
+\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). All experimental settings match those of the main paper unless stated otherwise.
+
+\section{Limitations}
+\label{sup:limitations}
+Despite its effectiveness, RePAIR has several limitations.
+
+\noindent
+\textbf{Scope of the single-sample claim.} \textit{Single-sample} refers to the size of the forget set, $|\mathcal{D}_f| = 1$. Existing LLM unlearning methods need a batch of forget examples and fail at this granularity (Table~7 of the main paper), whereas STAMP removes a target from one. It does not mean that no other data is used, since the retain buffer and the shared reference set $\mathcal{D}_{\textit{ref}}$ of 200 refusal prompts, which is fixed across all requests, are still required. %XREF was Table~\ref{tab:single_sample}
+
+\noindent
+\textbf{Retain data at inference time.} All reported results use a retain buffer of 10\% of the full retain set, which Table~6 of the main paper shows is sufficient, but STAMP still requires a replay buffer $\mathcal{D}_r$. This dependence is not specific to STAMP, as every baseline we compare against also relies on retain data, and retain-free unlearning is an emerging direction rather than a solved one. FLAT~\cite{wang2024llm} is the notable exception, operating on $\mathcal{D}_f$ alone through a regularizer. Storing the buffer on an edge device sits uneasily with the GDPR and CCPA motivation on which the framework rests, since the user must keep a slice of the data the system is meant to remove. %XREF was Table~\ref{tab:retain_ratio}
+
+\noindent
+\textbf{Three models rather than one.} RePAIR assigns intent detection, repair-code generation, and the edit itself to three separate models. This reflects the open-weight models available to us rather than a requirement of the method, since no single open model we tested was at once a reliable intent classifier and a competent code generator. A model strong in both general reasoning and code would subsume all three roles, allowing $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$ to be dropped and leaving a single model that repairs itself.
+
+\noindent
+\textbf{Resource constraints at test time.} As shown in Table~2 of the main paper, training-based methods require significantly more GPU memory than is typically available at inference. The STAMP-LR update itself is light, needing under $4$\,MB of workspace and no gradients, so the repair runs on device. The remaining cost is the surrounding pipeline, which currently keeps $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$ resident alongside $\mathcal{M}_{\textit{patient}}$. Collapsing these into a single capable model, as discussed above, or serving them remotely, leaves only $\mathcal{M}_{\textit{patient}}$ in memory and brings the full framework within an on-device budget. %XREF was Table~\ref{tab:cost_comparison}
+
+\noindent
+\textbf{Turnaround time.} End-to-end latency is 9.36 minutes for STAMP and 6.50 for STAMP-LR (Table~3 of the main paper), which is not what is usually meant by \textit{interactive}. The breakdown is informative. Of the 9.36 minutes, 7.13 are the repair itself and 2.23 are orchestration, namely the calls to $\mathcal{M}_{\textit{watchdog}}$ and $\mathcal{M}_{\textit{surgeon}}$ together with model loading and I/O. For STAMP-LR the split is 4.25 and 2.25, so the orchestration overhead is essentially constant and independent of the unlearning method. Within the repair, the closed-form solve itself takes seconds, and almost all of the remaining time is activation collection, which our implementation performs one sample at a time. Batching these forward passes and caching $\mathcal{D}_{\textit{ref}}$, which is fixed across requests, would remove most of this cost. The present latency is therefore a property of our implementation rather than of the method, and bringing it down to conversational speed is left to future work. %XREF was Table~\ref{tab:decomposition}
+
+\noindent
+\textbf{Abuse of the interface.} A natural-language unlearning channel is itself an attack surface, since the same request that removes a private fact could be used to remove refusal behaviour or safety-critical knowledge. We do not evaluate this, and we leave access control and deployment guidelines to future work. The exposure is bounded by the setting we target, namely a personal model whose knowledge resides in the weights, such as a standalone model provisioned for a single user who cannot write unlearning code. Hosted assistants instead hold personal details in the context window and answer from it, in which case $\mathcal{M}_{\textit{surgeon}}$ would rewrite the context rather than the weights, and the weight-level update studied here does not apply.
+
+\section{Additional Ablation Studies}
+\label{sup:ablations}
+
+\subsection{Choice of Intervention Layer}
+\label{sup:layer}
+\label{sec:layer_analysis}
+The knowledge-editing literature localises factual recall to the early feed-forward layers. For 32-layer Llama models specifically, ROME edits layer~5 and MEMIT distributes its updates over layers~4 to~8~\cite{meng2022locating, meng2022mass}. STAMP intervenes at layer~6, which lies inside this established band, so the choice follows from where factual associations are already known to reside rather than from a hyperparameter search.
+
+We confirm this empirically by sweeping the intervention layer and measuring unlearning directly. Table~\ref{tab:layer_ablation} reports forget and retain accuracy on the misinformation removal task, with two references: the unedited \textit{Base} model and the \textit{Oracle}, trained only on $\mathcal{D}_r^{\textit{full}}$; \textit{All} applies the update at every layer. Forgetting is complete at every choice ($Acc_\textit{f} = 0.00$ throughout), and retention varies only within a narrow band (79.17--80.13), with layer~6 the highest and closest to the Oracle. STAMP is therefore robust to the choice of intervention layer rather than dependent on it, and editing every layer brings no benefit over the single-layer intervention while costing proportionally more.
+
+\begin{table*}[t]
+\centering
+\caption{Effect of the intervention layer on Llama-3-8B on MMLU.}
+\label{tab:layer_ablation}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{l|cc|cccccccc|c}
+\Xhline{1.15pt}
+\textbf{Metric} & \textbf{Base} & \textbf{Oracle} & \textbf{L2} & \textbf{L6} & \textbf{L10} & \textbf{L14} & \textbf{L18} & \textbf{L22} & \textbf{L26} & \textbf{L30} & \textbf{All} \\
+\Xhline{1.15pt}
+$Acc_\textit{f}\!\downarrow$ & 83.70 & N/A & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+\rowcolor{gray!15}
+$Acc_\textit{r}\!\uparrow$   & 86.30 & 85.30 & 79.17 & 80.13 & 79.37 & 80.00 & 80.12 & 79.68 & 79.87 & 79.99 & 80.03 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table*}
+
+\subsection{Rank Analysis}
+\label{sup:rank}
+STAMP-LR decomposes $\mathbf{H} \approx \mathbf{A}\mathbf{B}$ with rank $r$ (Section~4.2 of the main paper). Table~\ref{tab:rank_analysis} varies $r$ on Llama-3-8B. Forgetting is complete at every rank ($F\text{-}RL = 0.00$ throughout), confirming that even a rank-8 subspace suffices to redirect the forget activations onto the refusal direction. What degrades at low rank is \textit{retention}: $R\text{-}RL$ falls from 0.88 at $r = 128$ to 0.72 at $r = 8$, as the low-rank approximation lacks the capacity to leave the retain activations undisturbed. Performance is stable for $r \geq 64$ ($R\text{-}RL = 0.88$), which we adopt as the default. All experiments are conducted on the personal data erasure task. %XREF was Section~\ref{sec:stamp}
+
+\begin{table}[h!]
+\centering
+\caption{Effect of rank $r$ on STAMP-LR performance on Llama-3-8B.}
+\label{tab:rank_analysis}
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c|ccc}
+\Xhline{1.15pt}
+\textbf{Rank ($r$)} & \textbf{F-RL}$\downarrow$ & \textbf{R-RL}$\uparrow$ & \textbf{RTE (min)} \\
+\Xhline{1.15pt}
+\rowcolor{gray!15}
+8   & 0.00 & 0.72 & 3.00 \\
+16  & 0.00 & 0.78 & 3.15 \\
+\rowcolor{gray!15}
+32  & 0.00 & 0.82 & 3.54 \\
+64  & 0.00 & 0.88 & 4.01 \\
+\rowcolor{gray!15}
+128 & 0.00 & 0.88 & 5.24 \\
+\Xhline{1.15pt}
+\end{tabular}
+\end{table}
