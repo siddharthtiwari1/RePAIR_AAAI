@@ -4,7 +4,7 @@ We propose \textbf{RePAIR}, a framework for interactive machine unlearning with 
 \begin{figure}[h!]
 \centering
 \includegraphics[width=0.65\linewidth]{images/interactive-Page-4.drawio.png}
-\caption{SwiGLU MLP in Llama-3-8B. STAMP updates only the down-projection $W_{\mathrm{down}}$ and freezes $W_{\mathrm{gate}}$ and $W_{\mathrm{up}}$. As the output is linear in the post-activation intermediate $h$, with $o = W_{\mathrm{down}} h$, the update has an exact closed form and never inverts the SiLU nonlinearity.}
+\caption{SwiGLU MLP in Llama-3-8B. STAMP updates only the down-projection $W_{\mathrm{down}}$ and freezes $W_{\mathrm{gate}}$ and $W_{\mathrm{up}}$.}
 \label{fig:mlp_architecture}
 \end{figure}
 
