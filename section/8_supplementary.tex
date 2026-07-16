@@ -6,7 +6,7 @@
 % Only cross-document \ref's were replaced with fixed numbers, marked %XREF.
 % =====================================================================
 
-\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). Section~\ref{sup:rq3} traces the pipeline end to end and evaluates robustness to query reformulation. Section~\ref{sup:code} lists the core implementation of STAMP and STAMP-LR. All experimental settings match those of the main paper unless stated otherwise.
+\noindent This supplementary material accompanies the main paper and is organized as follows. Section~\ref{sup:limitations} presents the extended discussion of limitations. Section~\ref{sup:ablations} reports two additional ablation studies: the choice of the intervention layer (\ref{sup:layer}) and the rank of STAMP-LR (\ref{sup:rank}). Section~\ref{sup:rq3} traces the pipeline end to end and evaluates robustness to query reformulation. Section~\ref{sup:code} provides code snippets for STAMP and STAMP-LR. All experimental settings match those of the main paper unless stated otherwise.
 
 \section{Limitations}
 \label{sup:limitations}
@@ -149,73 +149,45 @@ Oracle   & N/A & N/A & N/A & N/A \\
 
 Table~\ref{tab:robustness} shows that forgetting survives reformulation. Both variants hold $F\text{-}RL$ at 0.00 across paraphrased, aspect-shifted, and indirect queries: the healed model answers every reformulation with a refusal statement, which shares no lexical content with the erased biography, so ROUGE-L collapses to zero. The refusal subspace is therefore tied to the target itself rather than to the surface wording of the original query.
 
-\section{Core Implementation of STAMP and STAMP-LR}
+\section{Code Snippets for STAMP and STAMP-LR}
 \label{sup:code}
-Figure~\ref{fig:stamp_code} lists the core of the repair procedure exactly as executed on $\mathcal{M}_{\textit{patient}}$, comprising the steering vector of Eq.~(2), the collection of the stacked intermediates $\mathbf{H}$ and targets $O'$, the pseudoinverse solve of STAMP (Eqs.~6--7), and the sketched solve of STAMP-LR (Eqs.~8--9). Model loading, data preparation, and evaluation code are omitted. The constants match the main paper, with the intervention at layer~6, damping coefficient $\lambda = 10^{-4}$, and default rank $r = 64$.
+Figure~\ref{fig:stamp_code} illustrates the three core steps of the repair, the steering vector of Eq.~(2), the STAMP pseudoinverse solve (Eqs.~6--7), and the STAMP-LR sketched solve (Eqs.~8--9). The snippets are illustrative, with model loading, activation hooks, and evaluation omitted. The constants match the main paper, with the intervention at layer~6, damping coefficient $\lambda = 10^{-4}$, and default rank $r = 64$.
 
 \begin{figure*}[!tb]
-\begin{lstlisting}[language=Python]
-TARGET_LAYER = 6      # intervention layer l
-LAMBDA       = 1e-4   # damping coefficient lambda
-RANK         = 64     # sketch rank r (STAMP-LR)
+\begin{lstlisting}[style=snippet]
+def steering_vector(model, D_ref, D_f):
+    # mean MLP output over the refusal prompts (Eq. 2)
+    mu_ref = mlp_outputs(model, D_ref).mean(0)
+    # mean MLP output over the forget samples
+    mu_f = mlp_outputs(model, D_f).mean(0)
+    # direction from forget to refusal
+    return mu_ref - mu_f
 
-def steering_vector(model, tok, forget_set):
-    """Eq. (2): r_SV = mean MLP_l(D_ref) - mean MLP_l(D_f)."""
-    ref_acts    = mlp_activations(model, tok, REFUSAL_PROMPTS)   # D_ref
-    forget_acts = mlp_activations(model, tok, forget_set)        # D_f
-    return ref_acts.mean(0) - forget_acts.mean(0)
+def stamp(model, D_f, D_r, D_ref, lam=1e-4):
+    r_sv = steering_vector(model, D_ref, D_f)
+    # stack post-activation intermediates H (n x m) and MLP outputs O (n x d)
+    H, O = collect_activations(model, D_f + D_r + D_ref, layer=6)
+    # redirect the forget rows toward the refusal subspace
+    O[rows_of(D_f)] += r_sv
+    # regularized pseudoinverse solve (Eqs. 6-7), O(m^3)
+    W_new = inv(H.T @ H + lam * eye(m)) @ H.T @ O
+    # overwrite the down-projection of layer 6
+    set_down_proj(model, W_new)
 
-def collect_H_O_prime(model, tok, samples, down_proj, mlp, r_sv):
-    """Stack post-activation intermediates H and targets O'."""
-    all_H, all_O = [], []
-    for item in samples:
-        h_cap, o_cap = [None], [None]
-        def keep_h(m, i, o): h_cap[0] = i[0].detach()
-        def keep_o(m, i, o): o_cap[0] = o.detach()
-        hh = down_proj.register_forward_hook(keep_h)
-        ho = mlp.register_forward_hook(keep_o)
-        with torch.no_grad():
-            model(**encode(tok, item))
-        hh.remove(); ho.remove()
-        h = h_cap[0].reshape(-1, h_cap[0].shape[-1]).float()     # rows of H, in R^m
-        o = o_cap[0].reshape(-1, o_cap[0].shape[-1]).float()     # MLP_l(x), in R^d
-        if item["source"] == "forget":                           # o'(x) = MLP_l(x) + r_SV
-            o = o + r_sv.float().unsqueeze(0).expand_as(o)
-        all_H.append(h.cpu()); all_O.append(o.cpu())
-    return torch.cat(all_H), torch.cat(all_O)                    # H (n x m), O' (n x d)
-
-def stamp(model, tok, forget_set, retain_set):
-    """STAMP: W_new = (H^T H + lambda I)^{-1} H^T O'  (Eqs. 6-7)."""
-    mlp        = model.model.layers[TARGET_LAYER].mlp
-    down_proj  = mlp.down_proj
-    r_sv       = steering_vector(model, tok, forget_set)
-    samples    = forget_set + retain_set + refusal_samples(tok)
-    H, O_prime = collect_H_O_prime(model, tok, samples, down_proj, mlp, r_sv)
-
-    HtH    = H.T @ H + LAMBDA * torch.eye(H.shape[1])            # (m x m) Gram matrix
-    H_plus = torch.linalg.inv(HtH) @ H.T                         # O(m^3) solve
-    W_new  = H_plus @ O_prime                                    # (m x d)
-    with torch.no_grad():
-        down_proj.weight.copy_(W_new.T.to(down_proj.weight.dtype))
-
-def stamp_lr(model, tok, forget_set, retain_set, rank=RANK):
-    """STAMP-LR: sketch H ~ A B, then W_new = B+ A+ O'  (Eqs. 8-9)."""
-    mlp        = model.model.layers[TARGET_LAYER].mlp
-    down_proj  = mlp.down_proj
-    r_sv       = steering_vector(model, tok, forget_set)
-    samples    = forget_set + retain_set + refusal_samples(tok)
-    H, O_prime = collect_H_O_prime(model, tok, samples, down_proj, mlp, r_sv)
-
-    B = torch.randn(rank, H.shape[1])                            # (r x m) random
-    B = torch.linalg.qr(B.T).Q.T[:rank]                          # orthonormal rows
-    A = H @ B.T                                                  # (n x r) projection
-
-    A_plus = torch.linalg.inv(A.T @ A) @ A.T                     # (r x n)
-    B_plus = B.T @ torch.linalg.inv(B @ B.T)                     # (m x r)
-    W_new  = B_plus @ (A_plus @ O_prime)                         # O(r^3 + r^2 m)
-    with torch.no_grad():
-        down_proj.weight.copy_(W_new.T.to(down_proj.weight.dtype))
+def stamp_lr(model, D_f, D_r, D_ref, r=64):
+    r_sv = steering_vector(model, D_ref, D_f)
+    H, O = collect_activations(model, D_f + D_r + D_ref, layer=6)
+    O[rows_of(D_f)] += r_sv
+    # sketch H ~ A B with a random row-orthonormal B
+    B = qr(randn(r, m))            # (r x m)
+    A = H @ B.T                    # (n x r)
+    # pseudoinverses of the two small factors (Eq. 8)
+    A_plus = inv(A.T @ A) @ A.T
+    B_plus = B.T @ inv(B @ B.T)
+    # low-rank update (Eq. 9), O(r^3 + r^2 m)
+    W_new = B_plus @ (A_plus @ O)
+    set_down_proj(model, W_new)
 \end{lstlisting}
-\caption{Core implementation of STAMP and STAMP-LR. Comments reference the equations of the main paper.}
+\caption{Code snippets for STAMP and STAMP-LR. Comments reference the equations of the main paper.}
 \label{fig:stamp_code}
 \end{figure*}
